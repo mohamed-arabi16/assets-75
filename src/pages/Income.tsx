@@ -220,68 +220,75 @@ export default function Income() {
                 Record a new income entry to track your earnings
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" placeholder="e.g., Freelance Project" value={newIncome.title} onChange={(e) => setNewIncome({ ...newIncome, title: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddIncome();
+              }}
+            >
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="amount">Amount</Label>
-                  <Input id="amount" type="number" placeholder="0.00" value={newIncome.amount} onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })} />
+                  <Label htmlFor="title">Title</Label>
+                  <Input id="title" placeholder="e.g., Freelance Project" value={newIncome.title} onChange={(e) => setNewIncome({ ...newIncome, title: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="amount">Amount</Label>
+                    <Input id="amount" type="number" placeholder="0.00" value={newIncome.amount} onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label htmlFor="currency">Currency</Label>
+                    <Select value={newIncome.currency} onValueChange={(value) => setNewIncome({ ...newIncome, currency: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="USD" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD ($)</SelectItem>
+                        <SelectItem value="TRY">TRY (₺)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
-                  <Label htmlFor="currency">Currency</Label>
-                  <Select value={newIncome.currency} onValueChange={(value) => setNewIncome({ ...newIncome, currency: value })}>
+                  <Label htmlFor="category">Category</Label>
+                  <Select value={newIncome.category} onValueChange={(value) => setNewIncome({ ...newIncome, category: value })}>
                     <SelectTrigger>
-                      <SelectValue placeholder="USD" />
+                      <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="TRY">TRY (₺)</SelectItem>
+                      <SelectItem value="freelance">Freelance</SelectItem>
+                      <SelectItem value="commission">Commission</SelectItem>
+                      <SelectItem value="rent">Rent</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={newIncome.status} onValueChange={(value) => setNewIncome({ ...newIncome, status: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="expected">Expected</SelectItem>
+                      <SelectItem value="received">Received</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="date">Date</Label>
+                  <Input id="date" type="date" value={newIncome.date} onChange={(e) => setNewIncome({ ...newIncome, date: e.target.value })} />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setIsAddingIncome(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-gradient-primary">
+                    Add Income
+                  </Button>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select value={newIncome.category} onValueChange={(value) => setNewIncome({ ...newIncome, category: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="freelance">Freelance</SelectItem>
-                    <SelectItem value="commission">Commission</SelectItem>
-                    <SelectItem value="rent">Rent</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <Select value={newIncome.status} onValueChange={(value) => setNewIncome({ ...newIncome, status: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="expected">Expected</SelectItem>
-                    <SelectItem value="received">Received</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="date">Date</Label>
-                <Input id="date" type="date" value={newIncome.date} onChange={(e) => setNewIncome({ ...newIncome, date: e.target.value })} />
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setIsAddingIncome(false)}>
-                  Cancel
-                </Button>
-                <Button className="bg-gradient-primary" onClick={handleAddIncome}>
-                  Add Income
-                </Button>
-              </div>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

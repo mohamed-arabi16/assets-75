@@ -237,58 +237,65 @@ export default function Debts() {
                 Record a new debt to track your liabilities
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" placeholder="e.g., Credit Card" value={newDebt.title} onChange={(e) => setNewDebt({ ...newDebt, title: e.target.value })} />
-              </div>
-              <div>
-                <Label htmlFor="creditor">Creditor</Label>
-                <Input id="creditor" placeholder="e.g., Bank" value={newDebt.creditor} onChange={(e) => setNewDebt({ ...newDebt, creditor: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddDebt();
+              }}
+            >
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="amount">Amount</Label>
-                  <Input id="amount" type="number" placeholder="0.00" value={newDebt.amount} onChange={(e) => setNewDebt({ ...newDebt, amount: e.target.value })} />
+                  <Label htmlFor="title">Title</Label>
+                  <Input id="title" placeholder="e.g., Credit Card" value={newDebt.title} onChange={(e) => setNewDebt({ ...newDebt, title: e.target.value })} />
                 </div>
                 <div>
-                  <Label htmlFor="currency">Currency</Label>
-                  <Select value={newDebt.currency} onValueChange={(value) => setNewDebt({ ...newDebt, currency: value })}>
+                  <Label htmlFor="creditor">Creditor</Label>
+                  <Input id="creditor" placeholder="e.g., Bank" value={newDebt.creditor} onChange={(e) => setNewDebt({ ...newDebt, creditor: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="amount">Amount</Label>
+                    <Input id="amount" type="number" placeholder="0.00" value={newDebt.amount} onChange={(e) => setNewDebt({ ...newDebt, amount: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label htmlFor="currency">Currency</Label>
+                    <Select value={newDebt.currency} onValueChange={(value) => setNewDebt({ ...newDebt, currency: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="USD" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD ($)</SelectItem>
+                        <SelectItem value="TRY">TRY (₺)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="dueDate">Due Date</Label>
+                  <Input id="dueDate" type="date" value={newDebt.dueDate} onChange={(e) => setNewDebt({ ...newDebt, dueDate: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="type">Type</Label>
+                  <Select value={newDebt.type} onValueChange={(value) => setNewDebt({ ...newDebt, type: value })}>
                     <SelectTrigger>
-                      <SelectValue placeholder="USD" />
+                      <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="TRY">TRY (₺)</SelectItem>
+                      <SelectItem value="short">Short-Term</SelectItem>
+                      <SelectItem value="long">Long-Term</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setIsAddingDebt(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-gradient-primary">
+                    Add Debt
+                  </Button>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="dueDate">Due Date</Label>
-                <Input id="dueDate" type="date" value={newDebt.dueDate} onChange={(e) => setNewDebt({ ...newDebt, dueDate: e.target.value })} />
-              </div>
-              <div>
-                <Label htmlFor="type">Type</Label>
-                <Select value={newDebt.type} onValueChange={(value) => setNewDebt({ ...newDebt, type: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="short">Short-Term</SelectItem>
-                    <SelectItem value="long">Long-Term</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setIsAddingDebt(false)}>
-                  Cancel
-                </Button>
-                <Button className="bg-gradient-primary" onClick={handleAddDebt}>
-                  Add Debt
-                </Button>
-              </div>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
