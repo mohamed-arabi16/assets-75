@@ -29,33 +29,33 @@ const App = () => (
         <CurrencyProvider>
           <DateProvider>
             <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/signin" element={<SignIn />} />
-              <Route path="/signup" element={<SignUp />} />
-              <Route path="/*" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/income" element={<Income />} />
-                      <Route path="/expenses" element={<Expenses />} />
-                      <Route path="/debts" element={<Debts />} />
-                      <Route path="/assets" element={<Assets />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-            </Routes>
-          </BrowserRouter>
-          </TooltipProvider>
-        </DateProvider>
-      </CurrencyProvider>
-    </AuthProvider>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/signin" element={<SignIn />} />
+                  <Route path="/signup" element={<SignUp />} />
+                  <Route path="/*" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Routes>
+                          <Route path="/" element={<Dashboard />} />
+                          <Route path="/income" element={<Income />} />
+                          <Route path="/expenses" element={<Expenses />} />
+                          <Route path="/debts" element={<Debts />} />
+                          <Route path="/assets" element={<Assets />} />
+                          <Route path="/settings" element={<Settings />} />
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                </Routes>
+              </BrowserRouter>
+              <Toaster />
+              <Sonner />
+            </TooltipProvider>
+          </DateProvider>
+        </CurrencyProvider>
+      </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
