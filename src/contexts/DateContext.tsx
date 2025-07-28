@@ -29,7 +29,7 @@ export const DateProvider: React.FC<DateProviderProps> = ({ children }) => {
   });
 
   const getMonthOptions = () => {
-    const options = [];
+    const options = [{ value: 'all', label: 'All Date' }];
     const currentDate = new Date();
     
     // Generate last 12 months
@@ -44,6 +44,9 @@ export const DateProvider: React.FC<DateProviderProps> = ({ children }) => {
   };
 
   const getFilteredDate = () => {
+    if (selectedMonth === 'all') {
+      return { start: new Date(0), end: new Date() };
+    }
     const [year, month] = selectedMonth.split('-').map(Number);
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 0, 23, 59, 59, 999);
@@ -51,6 +54,7 @@ export const DateProvider: React.FC<DateProviderProps> = ({ children }) => {
   };
 
   const isCurrentMonth = () => {
+    if (selectedMonth === 'all') return false;
     const now = new Date();
     const currentMonthValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     return selectedMonth === currentMonthValue;
