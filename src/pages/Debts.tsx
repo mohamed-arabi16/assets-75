@@ -33,6 +33,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   CreditCard, 
   AlertTriangle, 
@@ -128,8 +135,18 @@ export default function Debts() {
       status: formData.get('status') as string,
     };
 
-    await supabase.from('debts').update(updatedDebt).match({ id: editingDebt.id });
-    setDebts(debts.map(debt => (debt.id === editingDebt.id ? { ...debt, ...updatedDebt } : debt)));
+    const { data, error } = await supabase
+      .from('debts')
+      .update(updatedDebt)
+      .match({ id: editingDebt.id })
+      .select();
+
+    if (error) {
+      console.error('Error updating debt:', error);
+      return;
+    }
+
+    setDebts(debts.map(debt => (debt.id === editingDebt.id ? data[0] : debt)));
     setIsEditingDebt(false);
     setEditingDebt(null);
   };
@@ -363,10 +380,15 @@ export default function Debts() {
                 </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
-                  <select name="status" defaultValue={editingDebt.status}>
-                    <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
-                  </select>
+                  <Select name="status" defaultValue={editingDebt.status}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button type="button" variant="outline" onClick={() => setIsEditingDebt(false)}>
