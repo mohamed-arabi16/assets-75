@@ -53,6 +53,32 @@ export default function Income() {
   const [deletingIncome, setDeletingIncome] = useState<Income | null>(null);
   const [filter, setFilter] = useState("all");
   const { formatCurrency, currency } = useCurrency();
+  const [newIncome, setNewIncome] = useState({
+    title: '',
+    amount: '',
+    currency: 'USD',
+    category: '',
+    status: '',
+    date: '',
+  });
+
+  const handleAddIncome = async () => {
+    const { data, error } = await supabase.from('incomes').insert([newIncome]).select();
+    if (error) {
+      console.error('Error adding income:', error);
+    } else if (data) {
+      setIncomes([...incomes, data[0]]);
+      setIsAddingIncome(false);
+      setNewIncome({
+        title: '',
+        amount: '',
+        currency: 'USD',
+        category: '',
+        status: '',
+        date: '',
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchIncomes = async () => {
@@ -185,16 +211,16 @@ export default function Income() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="title">Title</Label>
-                <Input id="title" placeholder="e.g., Freelance Project" />
+                <Input id="title" placeholder="e.g., Freelance Project" value={newIncome.title} onChange={(e) => setNewIncome({ ...newIncome, title: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="amount">Amount</Label>
-                  <Input id="amount" type="number" placeholder="0.00" />
+                  <Input id="amount" type="number" placeholder="0.00" value={newIncome.amount} onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })} />
                 </div>
                 <div>
                   <Label htmlFor="currency">Currency</Label>
-                  <Select>
+                  <Select value={newIncome.currency} onValueChange={(value) => setNewIncome({ ...newIncome, currency: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="USD" />
                     </SelectTrigger>
@@ -207,7 +233,7 @@ export default function Income() {
               </div>
               <div>
                 <Label htmlFor="category">Category</Label>
-                <Select>
+                <Select value={newIncome.category} onValueChange={(value) => setNewIncome({ ...newIncome, category: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -221,7 +247,7 @@ export default function Income() {
               </div>
               <div>
                 <Label htmlFor="status">Status</Label>
-                <Select>
+                <Select value={newIncome.status} onValueChange={(value) => setNewIncome({ ...newIncome, status: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
@@ -233,13 +259,13 @@ export default function Income() {
               </div>
               <div>
                 <Label htmlFor="date">Date</Label>
-                <Input id="date" type="date" />
+                <Input id="date" type="date" value={newIncome.date} onChange={(e) => setNewIncome({ ...newIncome, date: e.target.value })} />
               </div>
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setIsAddingIncome(false)}>
                   Cancel
                 </Button>
-                <Button className="bg-gradient-primary">
+                <Button className="bg-gradient-primary" onClick={handleAddIncome}>
                   Add Income
                 </Button>
               </div>
@@ -404,7 +430,7 @@ export default function Income() {
                   </div>
                   <div>
                     <Label htmlFor="currency">Currency</Label>
-                    <Select name="currency" value={editFormData.currency} onValueChange={(value) => setEditFormData(prev => ({ ...prev, currency: value }))}>
+                    <Select name="currency" value={editFormData.currency} onValueChange={(value) => handleInputChange({ target: { name: 'currency', value } } as React.ChangeEvent<HTMLSelectElement>)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select currency" />
                       </SelectTrigger>
@@ -421,7 +447,7 @@ export default function Income() {
                 </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
-                  <Select name="status" value={editFormData.status} onValueChange={(value) => setEditFormData(prev => ({ ...prev, status: value }))}>
+                  <Select name="status" value={editFormData.status} onValueChange={(value) => handleInputChange({ target: { name: 'status', value } } as React.ChangeEvent<HTMLSelectElement>)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

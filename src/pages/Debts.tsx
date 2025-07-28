@@ -81,6 +81,35 @@ export default function Debts() {
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [deletingDebt, setDeletingDebt] = useState<Debt | null>(null);
   const { formatCurrency, currency } = useCurrency();
+  const [isAddingDebt, setIsAddingDebt] = useState(false);
+  const [newDebt, setNewDebt] = useState({
+    title: '',
+    creditor: '',
+    amount: '',
+    currency: 'USD',
+    dueDate: '',
+    status: 'pending',
+    type: 'short'
+  });
+
+  const handleAddDebt = async () => {
+    const { data, error } = await supabase.from('debts').insert([newDebt]).select();
+    if (error) {
+      console.error('Error adding debt:', error);
+    } else if (data) {
+      setDebts([...debts, data[0]]);
+      setIsAddingDebt(false);
+      setNewDebt({
+        title: '',
+        creditor: '',
+        amount: '',
+        currency: 'USD',
+        dueDate: '',
+        status: 'pending',
+        type: 'short'
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchDebts = async () => {
@@ -178,11 +207,78 @@ export default function Debts() {
   return (
     <div className="p-6 space-y-6 bg-gradient-dashboard min-h-screen">
       {/* Page Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">Debt Management</h1>
-        <p className="text-muted-foreground">
-          Track and manage your short-term and long-term debts
-        </p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-foreground">Debt Management</h1>
+          <p className="text-muted-foreground">
+            Track and manage your short-term and long-term debts
+          </p>
+        </div>
+        <Dialog open={isAddingDebt} onOpenChange={setIsAddingDebt}>
+          <DialogTrigger asChild>
+            <Button className="bg-gradient-primary">Add Debt</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Debt</DialogTitle>
+              <DialogDescription>
+                Record a new debt to track your liabilities
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="title">Title</Label>
+                <Input id="title" placeholder="e.g., Credit Card" value={newDebt.title} onChange={(e) => setNewDebt({ ...newDebt, title: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="creditor">Creditor</Label>
+                <Input id="creditor" placeholder="e.g., Bank" value={newDebt.creditor} onChange={(e) => setNewDebt({ ...newDebt, creditor: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="amount">Amount</Label>
+                  <Input id="amount" type="number" placeholder="0.00" value={newDebt.amount} onChange={(e) => setNewDebt({ ...newDebt, amount: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="currency">Currency</Label>
+                  <Select value={newDebt.currency} onValueChange={(value) => setNewDebt({ ...newDebt, currency: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="USD" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD ($)</SelectItem>
+                      <SelectItem value="TRY">TRY (₺)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="dueDate">Due Date</Label>
+                <Input id="dueDate" type="date" value={newDebt.dueDate} onChange={(e) => setNewDebt({ ...newDebt, dueDate: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="type">Type</Label>
+                <Select value={newDebt.type} onValueChange={(value) => setNewDebt({ ...newDebt, type: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="short">Short-Term</SelectItem>
+                    <SelectItem value="long">Long-Term</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setIsAddingDebt(false)}>
+                  Cancel
+                </Button>
+                <Button className="bg-gradient-primary" onClick={handleAddDebt}>
+                  Add Debt
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Summary Cards */}
@@ -443,7 +539,7 @@ export default function Debts() {
                   </div>
                   <div>
                     <Label htmlFor="currency">Currency</Label>
-                    <Select name="currency" value={editFormData.currency} onValueChange={(value) => setEditFormData(prev => ({ ...prev, currency: value }))}>
+                    <Select name="currency" value={editFormData.currency} onValueChange={(value) => handleInputChange({ target: { name: 'currency', value } } as React.ChangeEvent<HTMLSelectElement>)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select currency" />
                       </SelectTrigger>
@@ -460,7 +556,7 @@ export default function Debts() {
                 </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
-                  <Select name="status" value={editFormData.status} onValueChange={(value) => setEditFormData(prev => ({ ...prev, status: value }))}>
+                  <Select name="status" value={editFormData.status} onValueChange={(value) => handleInputChange({ target: { name: 'status', value } } as React.ChangeEvent<HTMLSelectElement>)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
