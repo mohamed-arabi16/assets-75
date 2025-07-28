@@ -152,7 +152,6 @@ export default function Assets() {
 
     const formData = new FormData(e.currentTarget);
     const updatedAsset = {
-      ...editingAsset,
       type: formData.get('asset-type') as string,
       quantity: Number(formData.get('quantity')),
       unit: formData.get('unit') as string,
@@ -160,7 +159,7 @@ export default function Assets() {
     };
 
     await supabase.from('assets').update(updatedAsset).match({ id: editingAsset.id });
-    setAssets(assets.map(asset => (asset.id === editingAsset.id ? updatedAsset : asset)));
+    setAssets(assets.map(asset => (asset.id === editingAsset.id ? { ...asset, ...updatedAsset } : asset)));
     setIsEditingAsset(false);
     setEditingAsset(null);
   };

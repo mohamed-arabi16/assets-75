@@ -121,15 +121,15 @@ export default function Debts() {
 
     const formData = new FormData(e.currentTarget);
     const updatedDebt = {
-      ...editingDebt,
       title: formData.get('title') as string,
       creditor: formData.get('creditor') as string,
       amount: Number(formData.get('amount')),
       dueDate: formData.get('dueDate') as string,
+      status: formData.get('status') as string,
     };
 
     await supabase.from('debts').update(updatedDebt).match({ id: editingDebt.id });
-    setDebts(debts.map(debt => (debt.id === editingDebt.id ? updatedDebt : debt)));
+    setDebts(debts.map(debt => (debt.id === editingDebt.id ? { ...debt, ...updatedDebt } : debt)));
     setIsEditingDebt(false);
     setEditingDebt(null);
   };
@@ -360,6 +360,13 @@ export default function Debts() {
                 <div>
                   <Label htmlFor="dueDate">Due Date</Label>
                   <Input name="dueDate" type="date" defaultValue={editingDebt.dueDate || ''} />
+                </div>
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <select name="status" defaultValue={editingDebt.status}>
+                    <option value="pending">Pending</option>
+                    <option value="paid">Paid</option>
+                  </select>
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button type="button" variant="outline" onClick={() => setIsEditingDebt(false)}>
