@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from './AuthContext';
 
 export type Currency = 'USD' | 'TRY';
 
@@ -25,10 +27,32 @@ interface CurrencyProviderProps {
 }
 
 export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) => {
+  const { session } = useAuth();
   const [currency, setCurrency] = useState<Currency>('USD');
   const [exchangeRate, setExchangeRate] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserSettings = async () => {
+      if (session?.user?.id) {
+        const { data, error } = await supabase
+          .from('user_settings')
+          .select('default_currency')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (data) {
+          setCurrency(data.default_currency);
+        }
+        if (error) {
+          console.error('Error fetching user settings:', error);
+        }
+      }
+    };
+
+    fetchUserSettings();
+  }, [session]);
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
