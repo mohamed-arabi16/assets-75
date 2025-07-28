@@ -54,6 +54,19 @@ export default function Income() {
   const [filter, setFilter] = useState("all");
   const { formatCurrency } = useCurrency();
 
+  useEffect(() => {
+    const fetchIncomes = async () => {
+      const { data, error } = await supabase.from('incomes').select('*');
+      if (error) {
+        console.error('Error fetching incomes:', error);
+      } else if (data) {
+        setIncomes(data);
+      }
+    };
+
+    fetchIncomes();
+  }, []);
+
   // Filter incomes by selected month
   const filteredIncomesByMonth = useFilteredData(incomes);
 
