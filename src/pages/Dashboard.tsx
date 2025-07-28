@@ -16,14 +16,16 @@ export default function Dashboard() {
 
   // Show different message based on selected month
   const getSubtitle = () => {
-    if (isCurrentMonth()) {
-      return "Overview of your financial health and current balance";
-    } else {
-      const [year, month] = selectedMonth.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1);
-      const monthName = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-      return `Financial overview for ${monthName}`;
+    if (selectedMonth === 'all') {
+      return 'Financial overview for all dates';
     }
+    if (isCurrentMonth()) {
+      return 'Overview of your financial health and current balance';
+    }
+    const [year, month] = selectedMonth.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    const monthName = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    return `Financial overview for ${monthName}`;
   };
 
   return (

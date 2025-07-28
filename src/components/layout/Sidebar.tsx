@@ -73,7 +73,7 @@ export function Sidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: SidebarProps)
         "fixed z-50 lg:z-auto",
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         // Width styles
-        collapsed ? "w-16" : "w-64"
+        isMobileMenuOpen ? "w-64" : collapsed ? "w-16" : "w-64"
       )}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
