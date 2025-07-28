@@ -8,46 +8,45 @@ interface CommodityPrices {
 
 export const useCommodityPrices = () => {
   const [prices, setPrices] = useState<CommodityPrices>({
-    gold: 2000, // Fallback prices
-    silver: 25
+    gold: 0,
+    silver: 0,
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchPrices = async () => {
+      setLoading(true);
       try {
-        // Using metals.live as a free alternative for precious metals prices
         const response = await fetch('https://api.metals.live/v1/spot');
-        
         if (!response.ok) {
-          throw new Error('API request failed');
+          throw new Error(`API request failed with status ${response.status}`);
         }
-        
         const data = await response.json();
         
         if (data && Array.isArray(data)) {
-          // Find gold and silver prices from the API response
           const goldData = data.find(item => item.metal === 'gold');
           const silverData = data.find(item => item.metal === 'silver');
+
+          if (!goldData || !silverData) {
+            throw new Error('Gold or silver data not found in API response');
+          }
           
-          // Convert from troy ounces to grams (1 troy ounce = 31.1035 grams)
-          const goldPerGram = goldData ? goldData.price / 31.1035 : 64.5;
-          const silverPerGram = silverData ? silverData.price / 31.1035 : 0.85;
+          const goldPerGram = goldData.price / 31.1035;
+          const silverPerGram = silverData.price / 31.1035;
           
           setPrices({
             gold: goldPerGram,
-            silver: silverPerGram
+            silver: silverPerGram,
           });
         } else {
-          throw new Error('Invalid API response');
+          throw new Error('Invalid API response format');
         }
-      } catch (error) {
-        console.warn('Failed to fetch commodity prices, using fallback values:', error);
-        // Use fallback prices with some realistic variation
+      } catch (error: any) {
+        console.error('Failed to fetch commodity prices:', error.message);
         setPrices({
-          gold: 64.5 + (Math.random() - 0.5) * 2, // ~$64.5/gram ± $1
-          silver: 0.85 + (Math.random() - 0.5) * 0.1, // ~$0.85/gram ± $0.05
-          error: 'Using fallback prices'
+          gold: 0,
+          silver: 0,
+          error: 'Failed to fetch prices. Please try again later.',
         });
       } finally {
         setLoading(false);
@@ -56,8 +55,7 @@ export const useCommodityPrices = () => {
 
     fetchPrices();
     
-    // Update prices every hour
-    const interval = setInterval(fetchPrices, 3600000);
+    const interval = setInterval(fetchPrices, 60000); // Fetches every minute
     
     return () => clearInterval(interval);
   }, []);
