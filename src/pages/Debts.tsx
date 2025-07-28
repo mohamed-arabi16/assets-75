@@ -196,24 +196,33 @@ export default function Debts() {
     e.preventDefault();
     if (!editingDebt) return;
 
-    const payload = {
-      ...editFormData,
-      amount: parseFloat(String(editFormData.amount)),
-    };
-
-    const { error } = await supabase
-      .from('debts')
-      .update(payload)
-      .match({ id: editingDebt.id });
+    const { error } = await supabase.rpc('update_debt_amount', {
+      in_debt_id: editingDebt.id,
+      in_new_amount: parseFloat(String(editFormData.amount)),
+      in_note: note,
+    });
 
     if (error) {
       console.error('Error updating debt:', error);
       return;
     }
 
-    setDebts(debts.map(debt => (debt.id === editingDebt.id ? { ...debt, ...editFormData } : debt)));
+    // Refetch the specific debt to get the updated history
+    const { data: updatedDebt, error: fetchError } = await supabase
+      .from('debts')
+      .select('*, debt_amount_history(*)')
+      .eq('id', editingDebt.id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error refetching debt:', fetchError);
+    } else if (updatedDebt) {
+      setDebts(debts.map(debt => (debt.id === editingDebt.id ? updatedDebt : debt)));
+    }
+
     setIsEditingDebt(false);
     setEditingDebt(null);
+    setNote('');
   };
 
   return (
@@ -584,6 +593,10 @@ export default function Debts() {
                       <SelectItem value="paid">Paid</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label htmlFor="note">Note (optional)</Label>
+                  <Input name="note" value={note} onChange={(e) => setNote(e.target.value)} />
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button type="button" variant="outline" onClick={() => setIsEditingDebt(false)}>
