@@ -53,7 +53,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true); // Start collapsed on desktop for better space
   const location = useLocation();
 
   return (

@@ -63,7 +63,7 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
     return amount;
   };
 
-  const formatCurrency = (amount: number, fromCurrency: Currency = currency): string => {
+  const formatCurrency = (amount: number, fromCurrency: Currency = 'USD'): string => {
     const convertedAmount = convertCurrency(amount, fromCurrency);
     
     if (currency === 'USD') {

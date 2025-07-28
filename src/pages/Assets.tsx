@@ -161,11 +161,11 @@ export default function Assets() {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-dashboard min-h-screen">
+    <div className="p-4 sm:p-6 space-y-6 bg-gradient-dashboard min-h-screen">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">Asset Tracking</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Asset Tracking</h1>
           <p className="text-muted-foreground">
             Monitor your non-cash assets like silver, crypto, and real estate
           </p>
@@ -173,9 +173,10 @@ export default function Assets() {
         
         <Dialog open={isAddingAsset} onOpenChange={setIsAddingAsset}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-primary shadow-financial">
+            <Button className="bg-gradient-primary shadow-financial w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
-              Add Asset
+              <span className="hidden sm:inline">Add Asset</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -246,7 +247,7 @@ export default function Assets() {
         <FinancialCard
           variant="asset"
           title="Total Assets"
-          value={formatCurrency(totalAssetValue)}
+          value={formatCurrency(totalAssetValue, 'USD')}
           subtitle="All tracked assets"
           icon={<Gem className="h-5 w-5" />}
           trend={{
@@ -258,7 +259,7 @@ export default function Assets() {
         <FinancialCard
           variant="default"
           title="Silver Value"
-          value={formatCurrency(silverValue)}
+          value={formatCurrency(silverValue, 'USD')}
           subtitle="Precious metals"
           icon={<Gem className="h-5 w-5" />}
         />
@@ -266,7 +267,7 @@ export default function Assets() {
         <FinancialCard
           variant="default"
           title="Crypto Value" 
-          value={formatCurrency(cryptoValue)}
+          value={formatCurrency(cryptoValue, 'USD')}
           subtitle="Digital assets"
           icon={<Bitcoin className="h-5 w-5" />}
         />
@@ -274,7 +275,7 @@ export default function Assets() {
         <FinancialCard
           variant="default"
           title="Real Estate"
-          value={formatCurrency(realEstateValue)}
+          value={formatCurrency(realEstateValue, 'USD')}
           subtitle="Property value"
           icon={<Home className="h-5 w-5" />}
         />
@@ -282,32 +283,32 @@ export default function Assets() {
 
       {/* Asset List */}
       <div className="bg-gradient-card rounded-lg border border-border shadow-card">
-        <div className="p-6 border-b border-border">
+        <div className="p-4 sm:p-6 border-b border-border">
           <h2 className="text-xl font-semibold">Asset Portfolio</h2>
           <p className="text-muted-foreground">Your tracked assets and their current values</p>
         </div>
         
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="grid gap-4">
             {assets.map((asset) => (
               <Card key={asset.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div className="flex items-center justify-center w-10 h-10 bg-asset/10 rounded-lg">
                         {getAssetIcon(asset.type)}
                       </div>
-                      <div>
-                        <CardTitle className="text-lg">{formatAssetType(asset.type)}</CardTitle>
-                        <CardDescription>
-                          {asset.quantity} {asset.unit} @ {formatCurrency(asset.price_per_unit)}/{asset.unit}
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-lg truncate">{formatAssetType(asset.type)}</CardTitle>
+                        <CardDescription className="text-sm">
+                          {asset.quantity} {asset.unit} @ {formatCurrency(asset.price_per_unit, asset.currency as 'USD' | 'TRY')}/{asset.unit}
                         </CardDescription>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className="text-2xl font-bold">{formatCurrency(asset.total_value)}</div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                      <div className="text-left sm:text-right">
+                        <div className="text-xl sm:text-2xl font-bold">{formatCurrency(asset.total_value, asset.currency as 'USD' | 'TRY')}</div>
                         {asset.auto_update && (
                           <div className="flex items-center gap-1 text-xs text-green-600">
                             <TrendingUp className="h-3 w-3" />
@@ -317,10 +318,10 @@ export default function Assets() {
                       </div>
                       
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

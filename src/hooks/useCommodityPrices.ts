@@ -16,8 +16,8 @@ export const useCommodityPrices = () => {
   useEffect(() => {
     const fetchPrices = async () => {
       try {
-        // Using metals-api.com as it provides free tier for precious metals
-        const response = await fetch(`https://metals-api.com/api/latest?access_key=YOUR_API_KEY&base=USD&symbols=XAU,XAG`);
+        // Using metals.live as a free alternative for precious metals prices
+        const response = await fetch('https://api.metals.live/v1/spot');
         
         if (!response.ok) {
           throw new Error('API request failed');
@@ -25,11 +25,14 @@ export const useCommodityPrices = () => {
         
         const data = await response.json();
         
-        if (data.success && data.rates) {
-          // Convert from troy ounces to grams
-          // 1 troy ounce = 31.1035 grams
-          const goldPerGram = data.rates.XAU ? (1 / data.rates.XAU) / 31.1035 : 2000;
-          const silverPerGram = data.rates.XAG ? (1 / data.rates.XAG) / 31.1035 : 25;
+        if (data && Array.isArray(data)) {
+          // Find gold and silver prices from the API response
+          const goldData = data.find(item => item.metal === 'gold');
+          const silverData = data.find(item => item.metal === 'silver');
+          
+          // Convert from troy ounces to grams (1 troy ounce = 31.1035 grams)
+          const goldPerGram = goldData ? goldData.price / 31.1035 : 64.5;
+          const silverPerGram = silverData ? silverData.price / 31.1035 : 0.85;
           
           setPrices({
             gold: goldPerGram,

@@ -88,11 +88,11 @@ export default function Income() {
   }, {} as Record<string, number>);
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-dashboard min-h-screen">
+    <div className="p-4 sm:p-6 space-y-6 bg-gradient-dashboard min-h-screen">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">Income Tracking</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Income Tracking</h1>
           <p className="text-muted-foreground">
             Manage your freelance income and expected payments
           </p>
@@ -100,9 +100,10 @@ export default function Income() {
         
         <Dialog open={isAddingIncome} onOpenChange={setIsAddingIncome}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-primary shadow-financial">
+            <Button className="bg-gradient-primary shadow-financial w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
-              Add Income
+              <span className="hidden sm:inline">Add Income</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -179,11 +180,11 @@ export default function Income() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <FinancialCard
           variant="income"
           title="Total Received"
-          value={formatCurrency(totalReceived)}
+          value={formatCurrency(totalReceived, 'USD')}
           subtitle="This month"
           icon={<TrendingUp className="h-5 w-5" />}
           trend={{
@@ -195,7 +196,7 @@ export default function Income() {
         <FinancialCard
           variant="default"
           title="Expected"
-          value={formatCurrency(totalExpected)}
+          value={formatCurrency(totalExpected, 'USD')}
           subtitle="Next 30-60 days"
           icon={<TrendingUp className="h-5 w-5" />}
         />
@@ -203,7 +204,7 @@ export default function Income() {
         <FinancialCard
           variant="default"
           title="Total Income"
-          value={formatCurrency(totalReceived + totalExpected)}
+          value={formatCurrency(totalReceived + totalExpected, 'USD')}
           subtitle="Combined total"
           icon={<TrendingUp className="h-5 w-5" />}
         />
@@ -211,19 +212,19 @@ export default function Income() {
 
       {/* Income by Category */}
       <div className="bg-gradient-card rounded-lg border border-border shadow-card">
-        <div className="p-6 border-b border-border">
+        <div className="p-4 sm:p-6 border-b border-border">
           <h2 className="text-xl font-semibold">Total Income by Category</h2>
           <p className="text-muted-foreground">Breakdown of income sources</p>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {Object.entries(incomeByCategory).map(([category, amount]) => (
               <div key={category} className="bg-muted/30 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="h-4 w-4 text-income" />
                   <span className="text-sm font-medium capitalize">{category}</span>
                 </div>
-                <div className="text-2xl font-bold">{formatCurrency(amount)}</div>
+                <div className="text-2xl font-bold">{formatCurrency(amount, 'USD')}</div>
                 <div className="text-sm text-muted-foreground">
                   {((amount / (totalReceived + totalExpected)) * 100).toFixed(1)}% of total
                 </div>
@@ -235,13 +236,13 @@ export default function Income() {
 
       {/* Filters and Income List */}
       <div className="bg-gradient-card rounded-lg border border-border shadow-card">
-        <div className="p-6 border-b border-border">
-          <div className="flex items-center justify-between">
+        <div className="p-4 sm:p-6 border-b border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-xl font-semibold">Income History</h2>
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <Select value={filter} onValueChange={setFilter}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full sm:w-32">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

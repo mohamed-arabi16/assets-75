@@ -4,6 +4,8 @@ interface DateContextType {
   selectedMonth: string;
   setSelectedMonth: (month: string) => void;
   getMonthOptions: () => { value: string; label: string }[];
+  getFilteredDate: () => { start: Date; end: Date };
+  isCurrentMonth: () => boolean;
 }
 
 const DateContext = createContext<DateContextType | undefined>(undefined);
@@ -41,11 +43,26 @@ export const DateProvider: React.FC<DateProviderProps> = ({ children }) => {
     return options;
   };
 
+  const getFilteredDate = () => {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0, 23, 59, 59, 999);
+    return { start, end };
+  };
+
+  const isCurrentMonth = () => {
+    const now = new Date();
+    const currentMonthValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return selectedMonth === currentMonthValue;
+  };
+
   return (
     <DateContext.Provider value={{ 
       selectedMonth, 
       setSelectedMonth, 
-      getMonthOptions
+      getMonthOptions,
+      getFilteredDate,
+      isCurrentMonth
     }}>
       {children}
     </DateContext.Provider>
