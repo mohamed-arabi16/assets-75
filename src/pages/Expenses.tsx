@@ -132,15 +132,15 @@ export default function Expenses() {
 
     const formData = new FormData(e.currentTarget);
     const updatedExpense = {
-      ...editingExpense,
       title: formData.get('title') as string,
       category: formData.get('category') as string,
       amount: Number(formData.get('amount')),
       date: formData.get('date') as string,
+      status: formData.get('status') as string,
     };
 
     await supabase.from('expenses').update(updatedExpense).match({ id: editingExpense.id });
-    setExpenses(expenses.map(expense => (expense.id === editingExpense.id ? updatedExpense : expense)));
+    setExpenses(expenses.map(expense => (expense.id === editingExpense.id ? { ...expense, ...updatedExpense } : expense)));
     setIsEditingExpense(false);
     setEditingExpense(null);
   };
@@ -454,6 +454,13 @@ export default function Expenses() {
                 <div>
                   <Label htmlFor="date">Date</Label>
                   <Input name="date" type="date" defaultValue={editingExpense.date} />
+                </div>
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <select name="status" defaultValue={editingExpense.status}>
+                    <option value="pending">Pending</option>
+                    <option value="paid">Paid</option>
+                  </select>
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button type="button" variant="outline" onClick={() => setIsEditingExpense(false)}>

@@ -120,7 +120,6 @@ export default function Income() {
 
     const formData = new FormData(e.currentTarget);
     const updatedIncome = {
-      ...editingIncome,
       title: formData.get('title') as string,
       amount: Number(formData.get('amount')),
       category: formData.get('category') as string,
@@ -129,7 +128,7 @@ export default function Income() {
     };
 
     await supabase.from('incomes').update(updatedIncome).match({ id: editingIncome.id });
-    setIncomes(incomes.map(income => (income.id === editingIncome.id ? updatedIncome : income)));
+    setIncomes(incomes.map(income => (income.id === editingIncome.id ? { ...income, ...updatedIncome } : income)));
     setIsEditingIncome(false);
     setEditingIncome(null);
   };
