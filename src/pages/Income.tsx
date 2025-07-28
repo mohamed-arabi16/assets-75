@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCurrency, Currency } from "@/contexts/CurrencyContext";
 import { useFilteredData } from "@/hooks/useFilteredData";
 import { FinancialCard } from "@/components/ui/financial-card";
