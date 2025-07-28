@@ -349,10 +349,10 @@ export default function Assets() {
                       </div>
                       
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => console.log('edit clicked')}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => console.log('delete clicked')}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

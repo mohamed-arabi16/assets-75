@@ -344,10 +344,10 @@ export default function Expenses() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800">
+                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => console.log('edit clicked')}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800">
+                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => console.log('delete clicked')}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -392,10 +392,10 @@ export default function Expenses() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800">
+                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => console.log('edit clicked')}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800">
+                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => console.log('delete clicked')}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

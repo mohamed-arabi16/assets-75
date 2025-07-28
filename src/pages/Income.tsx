@@ -317,10 +317,10 @@ export default function Income() {
                   </div>
                   
                   <div className="flex gap-1 sm:gap-2">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => console.log('edit clicked')}>
                       <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => console.log('delete clicked')}>
                       <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                   </div>

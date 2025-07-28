@@ -17,7 +17,7 @@ export const useCommodityPrices = () => {
     const fetchPrices = async () => {
       setLoading(true);
       try {
-        const response = await fetch('https://api.metals.live/v1/spot');
+        const response = await fetch('https://api.metals.dev/v1/spot');
         if (!response.ok) {
           throw new Error(`API request failed with status ${response.status}`);
         }
