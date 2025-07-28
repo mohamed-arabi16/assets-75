@@ -72,6 +72,19 @@ export default function Expenses() {
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
   const { formatCurrency } = useCurrency();
 
+  useEffect(() => {
+    const fetchExpenses = async () => {
+      const { data, error } = await supabase.from('expenses').select('*');
+      if (error) {
+        console.error('Error fetching expenses:', error);
+      } else if (data) {
+        setExpenses(data);
+      }
+    };
+
+    fetchExpenses();
+  }, []);
+
   // Filter expenses by selected month
   const filteredExpensesByMonth = useFilteredData(expenses);
   

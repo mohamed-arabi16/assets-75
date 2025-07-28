@@ -73,18 +73,19 @@ export default function Assets() {
   const { prices: commodityPrices, loading: pricesLoading } = useCommodityPrices();
 
   useEffect(() => {
-    const loadAssets = async () => {
-      const { data } = await supabase.from('assets').select('*');
-      if (data && data.length > 0) {
-        // Update prices for silver and gold assets with real market data
+    const fetchAssets = async () => {
+      const { data, error } = await supabase.from('assets').select('*');
+      if (error) {
+        console.error('Error fetching assets:', error);
+      } else if (data) {
         const updatedAssets = data.map((asset: Asset & { date: string }) => {
-          if (asset.type === 'silver' && asset.auto_update) {
+          if (asset.type === 'silver' && asset.auto_update && commodityPrices.silver) {
             return {
               ...asset,
               price_per_unit: commodityPrices.silver,
               total_value: asset.quantity * commodityPrices.silver
             };
-          } else if (asset.type === 'gold' && asset.auto_update) {
+          } else if (asset.type === 'gold' && asset.auto_update && commodityPrices.gold) {
             return {
               ...asset,
               price_per_unit: commodityPrices.gold,
@@ -96,11 +97,11 @@ export default function Assets() {
         setAssets(updatedAssets);
       }
     };
-    
+
     if (!pricesLoading) {
-      loadAssets();
+      fetchAssets();
     }
-  }, [commodityPrices, pricesLoading]);
+  }, [pricesLoading, commodityPrices]);
 
   // Filter assets by selected month
   const filteredAssetsByMonth = useFilteredData(assets);

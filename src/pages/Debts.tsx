@@ -64,6 +64,19 @@ export default function Debts() {
   const [deletingDebt, setDeletingDebt] = useState<Debt | null>(null);
   const { formatCurrency } = useCurrency();
 
+  useEffect(() => {
+    const fetchDebts = async () => {
+      const { data, error } = await supabase.from('debts').select('*');
+      if (error) {
+        console.error('Error fetching debts:', error);
+      } else if (data) {
+        setDebts(data);
+      }
+    };
+
+    fetchDebts();
+  }, []);
+
   // Filter debts by selected month
   const filteredDebtsByMonth = useFilteredData(debts);
 
