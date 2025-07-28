@@ -93,7 +93,14 @@ export default function Debts() {
   });
 
   const handleAddDebt = async () => {
-    const { data, error } = await supabase.from('debts').insert([newDebt]).select();
+    const payload = {
+      ...newDebt,
+      amount: parseFloat(String(newDebt.amount)),
+    };
+    const { data, error } = await supabase
+      .from('debts')
+      .insert([payload])
+      .select();
     if (error) {
       console.error('Error adding debt:', error);
     } else if (data) {
@@ -189,9 +196,14 @@ export default function Debts() {
     e.preventDefault();
     if (!editingDebt) return;
 
+    const payload = {
+      ...editFormData,
+      amount: parseFloat(String(editFormData.amount)),
+    };
+
     const { error } = await supabase
       .from('debts')
-      .update(editFormData)
+      .update(payload)
       .match({ id: editingDebt.id });
 
     if (error) {
