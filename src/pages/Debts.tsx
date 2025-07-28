@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   CreditCard, 
   AlertTriangle, 
@@ -61,6 +62,16 @@ interface Debt {
   status: string;
   type: string;
   date: string;
+  debt_amount_history: DebtAmountHistory[];
+}
+
+interface DebtAmountHistory {
+  id: string;
+  debt_id: string;
+  user_id: string;
+  amount: number;
+  note: string;
+  logged_at: string;
 }
 
 export default function Debts() {
@@ -73,7 +84,7 @@ export default function Debts() {
 
   useEffect(() => {
     const fetchDebts = async () => {
-      const { data, error } = await supabase.from('debts').select('*');
+      const { data, error } = await supabase.from('debts').select('*, debt_amount_history(*)');
       if (error) {
         console.error('Error fetching debts:', error);
       } else if (data) {
@@ -122,33 +133,34 @@ export default function Debts() {
     setDeletingDebt(null);
   };
 
+  const [note, setNote] = useState('');
   const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingDebt) return;
 
     const formData = new FormData(e.currentTarget);
-    const updatedDebt = {
-      title: formData.get('title') as string,
-      creditor: formData.get('creditor') as string,
-      amount: Number(formData.get('amount')),
-      dueDate: formData.get('dueDate') as string,
-      status: formData.get('status') as string,
-    };
+    const updatedAmount = Number(formData.get('amount'));
 
-    const { data, error } = await supabase
-      .from('debts')
-      .update(updatedDebt)
-      .match({ id: editingDebt.id })
-      .select();
+    // optimistic update
+    const oldDebts = debts;
+    const newDebts = debts.map(debt => (debt.id === editingDebt.id ? { ...debt, amount: updatedAmount } : debt));
+    setDebts(newDebts);
+
+    const { error } = await supabase.rpc('update_debt_amount', {
+      in_debt_id: editingDebt.id,
+      in_new_amount: updatedAmount,
+      in_note: note,
+    });
 
     if (error) {
       console.error('Error updating debt:', error);
+      setDebts(oldDebts); // rollback
       return;
     }
 
-    setDebts(debts.map(debt => (debt.id === editingDebt.id ? data[0] : debt)));
     setIsEditingDebt(false);
     setEditingDebt(null);
+    setNote('');
   };
 
   return (
@@ -230,6 +242,7 @@ export default function Debts() {
                     <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Due Date</TableHead>
                     <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Status</TableHead>
                     <TableHead className="text-sm text-muted-foreground uppercase tracking-wide text-right">Amount</TableHead>
+                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">History</TableHead>
                     <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -252,6 +265,26 @@ export default function Debts() {
                       </TableCell>
                       <TableCell className="text-right text-base font-medium text-[#0C1439] dark:text-foreground">
                         {formatCurrency(debt.amount)}
+                      </TableCell>
+                      <TableCell>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm">View History</Button>
+                          </PopoverTrigger>
+                          <PopoverContent>
+                            <div className="space-y-2">
+                              <h4 className="font-medium leading-none">Amount History</h4>
+                              <ul className="space-y-1">
+                                {debt.debt_amount_history.map(history => (
+                                  <li key={history.id} className="text-sm">
+                                    {formatCurrency(history.amount)} on {formatDate(history.logged_at)}
+                                    {history.note && <p className="text-xs text-muted-foreground">{history.note}</p>}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
@@ -294,6 +327,7 @@ export default function Debts() {
                     <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Due Date</TableHead>
                     <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Status</TableHead>
                     <TableHead className="text-sm text-muted-foreground uppercase tracking-wide text-right">Amount</TableHead>
+                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">History</TableHead>
                     <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -316,6 +350,26 @@ export default function Debts() {
                       </TableCell>
                       <TableCell className="text-right text-base font-medium text-[#0C1439] dark:text-foreground">
                         {formatCurrency(debt.amount)}
+                      </TableCell>
+                      <TableCell>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm">View History</Button>
+                          </PopoverTrigger>
+                          <PopoverContent>
+                            <div className="space-y-2">
+                              <h4 className="font-medium leading-none">Amount History</h4>
+                              <ul className="space-y-1">
+                                {debt.debt_amount_history.map(history => (
+                                  <li key={history.id} className="text-sm">
+                                    {formatCurrency(history.amount)} on {formatDate(history.logged_at)}
+                                    {history.note && <p className="text-xs text-muted-foreground">{history.note}</p>}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
@@ -373,6 +427,10 @@ export default function Debts() {
                 <div>
                   <Label htmlFor="amount">Amount</Label>
                   <Input name="amount" type="number" step="0.01" defaultValue={editingDebt.amount} />
+                </div>
+                <div>
+                  <Label htmlFor="note">Note (Optional)</Label>
+                  <Input name="note" value={note} onChange={(e) => setNote(e.target.value)} />
                 </div>
                 <div>
                   <Label htmlFor="dueDate">Due Date</Label>

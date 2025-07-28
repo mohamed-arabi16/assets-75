@@ -84,3 +84,29 @@ CREATE TABLE user_settings (
     auto_price_update boolean NOT NULL DEFAULT true,
     language text NOT NULL DEFAULT 'en'
 );
+
+-- enable pgcrypto once
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- 1) new table to store snapshots
+CREATE TABLE debt_amount_history (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    debt_id   uuid NOT NULL REFERENCES debts(id) ON DELETE CASCADE,
+    user_id   uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    amount    numeric NOT NULL,          -- full amount at this moment
+    note      text NOT NULL DEFAULT '',
+    logged_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX debt_amount_history_debt_idx ON debt_amount_history(debt_id);
+
+-- 2) row-level security
+ALTER TABLE debt_amount_history ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "user reads own debt history"
+ON debt_amount_history FOR SELECT
+USING (user_id = auth.uid());
+
+CREATE POLICY "user inserts own debt history"
+ON debt_amount_history FOR INSERT
+WITH CHECK (user_id = auth.uid());
