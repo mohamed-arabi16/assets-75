@@ -233,70 +233,77 @@ export default function Expenses() {
                 Record a new expense to track your spending
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" placeholder="e.g., Office Rent" value={newExpense.title} onChange={(e) => setNewExpense({ ...newExpense, title: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddExpense();
+              }}
+            >
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="amount">Amount</Label>
-                  <Input id="amount" type="number" placeholder="0.00" value={newExpense.amount} onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })} />
+                  <Label htmlFor="title">Title</Label>
+                  <Input id="title" placeholder="e.g., Office Rent" value={newExpense.title} onChange={(e) => setNewExpense({ ...newExpense, title: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="amount">Amount</Label>
+                    <Input id="amount" type="number" placeholder="0.00" value={newExpense.amount} onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label htmlFor="currency">Currency</Label>
+                    <Select value={newExpense.currency} onValueChange={(value) => setNewExpense({ ...newExpense, currency: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="USD" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD ($)</SelectItem>
+                        <SelectItem value="TRY">TRY (₺)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
-                  <Label htmlFor="currency">Currency</Label>
-                  <Select value={newExpense.currency} onValueChange={(value) => setNewExpense({ ...newExpense, currency: value })}>
+                  <Label htmlFor="category">Category</Label>
+                  <Select value={newExpense.category} onValueChange={(value) => setNewExpense({ ...newExpense, category: value })}>
                     <SelectTrigger>
-                      <SelectValue placeholder="USD" />
+                      <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="TRY">TRY (₺)</SelectItem>
+                      <SelectItem value="housing">Housing</SelectItem>
+                      <SelectItem value="utilities">Utilities</SelectItem>
+                      <SelectItem value="transportation">Transportation</SelectItem>
+                      <SelectItem value="groceries">Groceries</SelectItem>
+                      <SelectItem value="healthcare">Healthcare</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <Label htmlFor="type">Type</Label>
+                  <Select value={newExpense.type} onValueChange={(value) => setNewExpense({ ...newExpense, type: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed">Fixed</SelectItem>
+                      <SelectItem value="variable">Variable</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="date">Date</Label>
+                  <Input id="date" type="date" value={newExpense.date} onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })} />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setIsAddingExpense(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-gradient-primary">
+                    Add Expense
+                  </Button>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select value={newExpense.category} onValueChange={(value) => setNewExpense({ ...newExpense, category: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="housing">Housing</SelectItem>
-                    <SelectItem value="utilities">Utilities</SelectItem>
-                    <SelectItem value="transportation">Transportation</SelectItem>
-                    <SelectItem value="groceries">Groceries</SelectItem>
-                    <SelectItem value="healthcare">Healthcare</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="type">Type</Label>
-                <Select value={newExpense.type} onValueChange={(value) => setNewExpense({ ...newExpense, type: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fixed">Fixed</SelectItem>
-                    <SelectItem value="variable">Variable</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="date">Date</Label>
-                <Input id="date" type="date" value={newExpense.date} onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })} />
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setIsAddingExpense(false)}>
-                  Cancel
-                </Button>
-                <Button className="bg-gradient-primary" onClick={handleAddExpense}>
-                  Add Expense
-                </Button>
-              </div>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

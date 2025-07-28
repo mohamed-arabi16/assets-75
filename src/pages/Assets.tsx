@@ -259,58 +259,65 @@ export default function Assets() {
                 Track a new asset in your portfolio
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="asset-type">Asset Type</Label>
-                <Select value={newAsset.type} onValueChange={(value) => setNewAsset({ ...newAsset, type: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select asset type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="silver">Silver</SelectItem>
-                    <SelectItem value="gold">Gold</SelectItem>
-                    <SelectItem value="bitcoin">Bitcoin</SelectItem>
-                    <SelectItem value="ethereum">Ethereum</SelectItem>
-                    <SelectItem value="real_estate">Real Estate</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddAsset();
+              }}
+            >
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="quantity">Quantity</Label>
-                  <Input id="quantity" type="number" step="0.001" placeholder="0.00" value={newAsset.quantity} onChange={(e) => setNewAsset({ ...newAsset, quantity: e.target.value })} />
-                </div>
-                <div>
-                  <Label htmlFor="unit">Unit</Label>
-                  <Select value={newAsset.unit} onValueChange={(value) => setNewAsset({ ...newAsset, unit: value })}>
+                  <Label htmlFor="asset-type">Asset Type</Label>
+                  <Select value={newAsset.type} onValueChange={(value) => setNewAsset({ ...newAsset, type: value })}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select unit" />
+                      <SelectValue placeholder="Select asset type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="grams">Grams</SelectItem>
-                      <SelectItem value="ounces">Ounces</SelectItem>
-                      <SelectItem value="BTC">BTC</SelectItem>
-                      <SelectItem value="ETH">ETH</SelectItem>
-                      <SelectItem value="property">Property</SelectItem>
-                      <SelectItem value="shares">Shares</SelectItem>
+                      <SelectItem value="silver">Silver</SelectItem>
+                      <SelectItem value="gold">Gold</SelectItem>
+                      <SelectItem value="bitcoin">Bitcoin</SelectItem>
+                      <SelectItem value="ethereum">Ethereum</SelectItem>
+                      <SelectItem value="real_estate">Real Estate</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="quantity">Quantity</Label>
+                    <Input id="quantity" type="number" step="0.001" placeholder="0.00" value={newAsset.quantity} onChange={(e) => setNewAsset({ ...newAsset, quantity: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label htmlFor="unit">Unit</Label>
+                    <Select value={newAsset.unit} onValueChange={(value) => setNewAsset({ ...newAsset, unit: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="grams">Grams</SelectItem>
+                        <SelectItem value="ounces">Ounces</SelectItem>
+                        <SelectItem value="BTC">BTC</SelectItem>
+                        <SelectItem value="ETH">ETH</SelectItem>
+                        <SelectItem value="property">Property</SelectItem>
+                        <SelectItem value="shares">Shares</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="price-per-unit">Price per Unit</Label>
+                  <Input id="price-per-unit" type="number" step="0.01" placeholder="0.00" value={newAsset.price_per_unit} onChange={(e) => setNewAsset({ ...newAsset, price_per_unit: e.target.value })} />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setIsAddingAsset(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-gradient-primary">
+                    Add Asset
+                  </Button>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="price-per-unit">Price per Unit</Label>
-                <Input id="price-per-unit" type="number" step="0.01" placeholder="0.00" value={newAsset.price_per_unit} onChange={(e) => setNewAsset({ ...newAsset, price_per_unit: e.target.value })} />
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setIsAddingAsset(false)}>
-                  Cancel
-                </Button>
-                <Button className="bg-gradient-primary" onClick={handleAddAsset}>
-                  Add Asset
-                </Button>
-              </div>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
