@@ -53,7 +53,7 @@ import { useFilteredData, useMonthlyStats } from "@/hooks/useFilteredData";
 import { supabase } from "@/lib/supabaseClient";
 
 interface Expense {
-  id: number;
+  id: string;
   title: string;
   category: string;
   amount: number;
@@ -139,8 +139,18 @@ export default function Expenses() {
       status: formData.get('status') as string,
     };
 
-    await supabase.from('expenses').update(updatedExpense).match({ id: editingExpense.id });
-    setExpenses(expenses.map(expense => (expense.id === editingExpense.id ? { ...expense, ...updatedExpense } : expense)));
+    const { data, error } = await supabase
+      .from('expenses')
+      .update(updatedExpense)
+      .match({ id: editingExpense.id })
+      .select();
+
+    if (error) {
+      console.error('Error updating expense:', error);
+      return;
+    }
+
+    setExpenses(expenses.map(expense => (expense.id === editingExpense.id ? data[0] : expense)));
     setIsEditingExpense(false);
     setEditingExpense(null);
   };
