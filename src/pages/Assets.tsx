@@ -69,7 +69,7 @@ export default function Assets() {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [isDeletingAsset, setIsDeletingAsset] = useState(false);
   const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null);
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currency } = useCurrency();
   const { prices: commodityPrices, loading: pricesLoading } = useCommodityPrices();
 
   useEffect(() => {
@@ -128,8 +128,27 @@ export default function Assets() {
     return type.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const [editFormData, setEditFormData] = useState({
+    type: '',
+    quantity: 0,
+    unit: '',
+    price_per_unit: 0,
+    currency: '',
+    total_value: 0,
+    auto_update: false,
+  });
+
   const handleEditClick = (asset: Asset) => {
     setEditingAsset(asset);
+    setEditFormData({
+      type: asset.type,
+      quantity: asset.quantity,
+      unit: asset.unit,
+      price_per_unit: asset.price_per_unit,
+      currency: asset.currency,
+      total_value: asset.total_value,
+      auto_update: asset.auto_update,
+    });
     setIsEditingAsset(true);
   };
 
@@ -146,26 +165,18 @@ export default function Assets() {
     setDeletingAsset(null);
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingAsset) return;
 
-    const formData = new FormData(e.currentTarget);
-    const quantity = Number(formData.get('quantity'));
-    const price_per_unit = Number(formData.get('price-per-unit'));
-    const total_value = quantity * price_per_unit;
-
-    const updatedAsset = {
-      type: formData.get('asset-type') as string,
-      quantity,
-      unit: formData.get('unit') as string,
-      price_per_unit,
-      total_value,
-    };
-
     const { data, error } = await supabase
       .from('assets')
-      .update(updatedAsset)
+      .update(editFormData)
       .match({ id: editingAsset.id })
       .select();
 
@@ -381,7 +392,7 @@ export default function Assets() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="asset-type">Asset Type</Label>
-                  <Select name="asset-type" defaultValue={editingAsset.type}>
+                  <Select name="type" value={editFormData.type} onValueChange={(value) => setEditFormData(prev => ({ ...prev, type: value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select asset type" />
                     </SelectTrigger>
@@ -398,11 +409,11 @@ export default function Assets() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="quantity">Quantity</Label>
-                    <Input name="quantity" type="number" step="0.001" defaultValue={editingAsset.quantity} />
+                    <Input name="quantity" type="number" step="0.001" value={editFormData.quantity} onChange={handleInputChange} />
                   </div>
                   <div>
                     <Label htmlFor="unit">Unit</Label>
-                    <Select name="unit" defaultValue={editingAsset.unit}>
+                    <Select name="unit" value={editFormData.unit} onValueChange={(value) => setEditFormData(prev => ({ ...prev, unit: value }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select unit" />
                       </SelectTrigger>
@@ -417,9 +428,23 @@ export default function Assets() {
                     </Select>
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="price-per-unit">Price per Unit</Label>
-                  <Input name="price-per-unit" type="number" step="0.01" defaultValue={editingAsset.price_per_unit} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="price_per_unit">Price per Unit</Label>
+                    <Input name="price_per_unit" type="number" step="0.01" value={editFormData.price_per_unit} onChange={handleInputChange} />
+                  </div>
+                  <div>
+                    <Label htmlFor="currency">Currency</Label>
+                    <Select name="currency" value={editFormData.currency} onValueChange={(value) => setEditFormData(prev => ({ ...prev, currency: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="TRY">TRY</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button type="button" variant="outline" onClick={() => setIsEditingAsset(false)}>

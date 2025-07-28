@@ -80,7 +80,7 @@ export default function Debts() {
   const [isEditingDebt, setIsEditingDebt] = useState(false);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [deletingDebt, setDeletingDebt] = useState<Debt | null>(null);
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currency } = useCurrency();
 
   useEffect(() => {
     const fetchDebts = async () => {
@@ -117,8 +117,25 @@ export default function Debts() {
     });
   };
 
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    creditor: '',
+    amount: 0,
+    dueDate: '',
+    status: '',
+    currency: '',
+  });
+
   const handleEditClick = (debt: Debt) => {
     setEditingDebt(debt);
+    setEditFormData({
+      title: debt.title,
+      creditor: debt.creditor,
+      amount: debt.amount,
+      dueDate: debt.dueDate || '',
+      status: debt.status,
+      currency: debt.currency,
+    });
     setIsEditingDebt(true);
   };
 
@@ -134,33 +151,28 @@ export default function Debts() {
   };
 
   const [note, setNote] = useState('');
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingDebt) return;
 
-    const formData = new FormData(e.currentTarget);
-    const updatedAmount = Number(formData.get('amount'));
-
-    // optimistic update
-    const oldDebts = debts;
-    const newDebts = debts.map(debt => (debt.id === editingDebt.id ? { ...debt, amount: updatedAmount } : debt));
-    setDebts(newDebts);
-
-    const { error } = await supabase.rpc('update_debt_amount', {
-      in_debt_id: editingDebt.id,
-      in_new_amount: updatedAmount,
-      in_note: note,
-    });
+    const { error } = await supabase
+      .from('debts')
+      .update(editFormData)
+      .match({ id: editingDebt.id });
 
     if (error) {
       console.error('Error updating debt:', error);
-      setDebts(oldDebts); // rollback
       return;
     }
 
+    setDebts(debts.map(debt => (debt.id === editingDebt.id ? { ...debt, ...editFormData } : debt)));
     setIsEditingDebt(false);
     setEditingDebt(null);
-    setNote('');
   };
 
   return (
@@ -418,27 +430,37 @@ export default function Debts() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="title">Title</Label>
-                  <Input name="title" defaultValue={editingDebt.title} />
+                  <Input name="title" value={editFormData.title} onChange={handleInputChange} />
                 </div>
                 <div>
                   <Label htmlFor="creditor">Creditor</Label>
-                  <Input name="creditor" defaultValue={editingDebt.creditor} />
+                  <Input name="creditor" value={editFormData.creditor} onChange={handleInputChange} />
                 </div>
-                <div>
-                  <Label htmlFor="amount">Amount</Label>
-                  <Input name="amount" type="number" step="0.01" defaultValue={editingDebt.amount} />
-                </div>
-                <div>
-                  <Label htmlFor="note">Note (Optional)</Label>
-                  <Input name="note" value={note} onChange={(e) => setNote(e.target.value)} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="amount">Amount</Label>
+                    <Input name="amount" type="number" step="0.01" value={editFormData.amount} onChange={handleInputChange} />
+                  </div>
+                  <div>
+                    <Label htmlFor="currency">Currency</Label>
+                    <Select name="currency" value={editFormData.currency} onValueChange={(value) => setEditFormData(prev => ({ ...prev, currency: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="TRY">TRY</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="dueDate">Due Date</Label>
-                  <Input name="dueDate" type="date" defaultValue={editingDebt.dueDate || ''} />
+                  <Input name="dueDate" type="date" value={editFormData.dueDate} onChange={handleInputChange} />
                 </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
-                  <Select name="status" defaultValue={editingDebt.status}>
+                  <Select name="status" value={editFormData.status} onValueChange={(value) => setEditFormData(prev => ({ ...prev, status: value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>

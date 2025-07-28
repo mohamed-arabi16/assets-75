@@ -52,7 +52,7 @@ export default function Income() {
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
   const [deletingIncome, setDeletingIncome] = useState<Income | null>(null);
   const [filter, setFilter] = useState("all");
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currency } = useCurrency();
 
   useEffect(() => {
     const fetchIncomes = async () => {
@@ -98,8 +98,25 @@ export default function Income() {
     return acc;
   }, {} as Record<string, number>);
 
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    amount: 0,
+    category: '',
+    status: '',
+    date: '',
+    currency: '',
+  });
+
   const handleEditClick = (income: Income) => {
     setEditingIncome(income);
+    setEditFormData({
+      title: income.title,
+      amount: income.amount,
+      category: income.category,
+      status: income.status,
+      date: income.date,
+      currency: income.currency,
+    });
     setIsEditingIncome(true);
   };
 
@@ -114,22 +131,18 @@ export default function Income() {
     setDeletingIncome(null);
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingIncome) return;
 
-    const formData = new FormData(e.currentTarget);
-    const updatedIncome = {
-      title: formData.get('title') as string,
-      amount: Number(formData.get('amount')),
-      category: formData.get('category') as string,
-      status: formData.get('status') as string,
-      date: formData.get('date') as string,
-    };
-
     const { data, error } = await supabase
       .from('incomes')
-      .update(updatedIncome)
+      .update(editFormData)
       .match({ id: editingIncome.id })
       .select();
 
@@ -382,19 +395,33 @@ export default function Income() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="title">Title</Label>
-                  <Input name="title" defaultValue={editingIncome.title} />
+                  <Input name="title" value={editFormData.title} onChange={handleInputChange} />
                 </div>
-                <div>
-                  <Label htmlFor="amount">Amount</Label>
-                  <Input name="amount" type="number" step="0.01" defaultValue={editingIncome.amount} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="amount">Amount</Label>
+                    <Input name="amount" type="number" step="0.01" value={editFormData.amount} onChange={handleInputChange} />
+                  </div>
+                  <div>
+                    <Label htmlFor="currency">Currency</Label>
+                    <Select name="currency" value={editFormData.currency} onValueChange={(value) => setEditFormData(prev => ({ ...prev, currency: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="TRY">TRY</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="category">Category</Label>
-                  <Input name="category" defaultValue={editingIncome.category} />
+                  <Input name="category" value={editFormData.category} onChange={handleInputChange} />
                 </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
-                  <Select name="status" defaultValue={editingIncome.status}>
+                  <Select name="status" value={editFormData.status} onValueChange={(value) => setEditFormData(prev => ({ ...prev, status: value }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -406,7 +433,7 @@ export default function Income() {
                 </div>
                 <div>
                   <Label htmlFor="date">Date</Label>
-                  <Input name="date" type="date" defaultValue={editingIncome.date} />
+                  <Input name="date" type="date" value={editFormData.date} onChange={handleInputChange} />
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button type="button" variant="outline" onClick={() => setIsEditingIncome(false)}>

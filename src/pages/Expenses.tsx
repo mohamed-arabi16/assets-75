@@ -70,7 +70,7 @@ export default function Expenses() {
   const [isEditingExpense, setIsEditingExpense] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currency } = useCurrency();
 
   useEffect(() => {
     const fetchExpenses = async () => {
@@ -110,8 +110,25 @@ export default function Expenses() {
     return status === "paid" ? "bg-green-100 text-green-600" : "bg-yellow-100 text-yellow-600";
   };
 
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    category: '',
+    amount: 0,
+    date: '',
+    status: '',
+    currency: '',
+  });
+
   const handleEditClick = (expense: Expense) => {
     setEditingExpense(expense);
+    setEditFormData({
+      title: expense.title,
+      category: expense.category,
+      amount: expense.amount,
+      date: expense.date,
+      status: expense.status,
+      currency: expense.currency,
+    });
     setIsEditingExpense(true);
   };
 
@@ -126,22 +143,18 @@ export default function Expenses() {
     setDeletingExpense(null);
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingExpense) return;
 
-    const formData = new FormData(e.currentTarget);
-    const updatedExpense = {
-      title: formData.get('title') as string,
-      category: formData.get('category') as string,
-      amount: Number(formData.get('amount')),
-      date: formData.get('date') as string,
-      status: formData.get('status') as string,
-    };
-
     const { data, error } = await supabase
       .from('expenses')
-      .update(updatedExpense)
+      .update(editFormData)
       .match({ id: editingExpense.id })
       .select();
 
@@ -451,26 +464,45 @@ export default function Expenses() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="title">Title</Label>
-                  <Input name="title" defaultValue={editingExpense.title} />
+                  <Input name="title" value={editFormData.title} onChange={handleInputChange} />
                 </div>
                 <div>
                   <Label htmlFor="category">Category</Label>
-                  <Input name="category" defaultValue={editingExpense.category} />
+                  <Input name="category" value={editFormData.category} onChange={handleInputChange} />
                 </div>
-                <div>
-                  <Label htmlFor="amount">Amount</Label>
-                  <Input name="amount" type="number" step="0.01" defaultValue={editingExpense.amount} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="amount">Amount</Label>
+                    <Input name="amount" type="number" step="0.01" value={editFormData.amount} onChange={handleInputChange} />
+                  </div>
+                  <div>
+                    <Label htmlFor="currency">Currency</Label>
+                    <Select name="currency" value={editFormData.currency} onValueChange={(value) => setEditFormData(prev => ({ ...prev, currency: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="TRY">TRY</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="date">Date</Label>
-                  <Input name="date" type="date" defaultValue={editingExpense.date} />
+                  <Input name="date" type="date" value={editFormData.date} onChange={handleInputChange} />
                 </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
-                  <select name="status" defaultValue={editingExpense.status}>
-                    <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
-                  </select>
+                  <Select name="status" value={editFormData.status} onValueChange={(value) => setEditFormData(prev => ({ ...prev, status: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button type="button" variant="outline" onClick={() => setIsEditingExpense(false)}>
