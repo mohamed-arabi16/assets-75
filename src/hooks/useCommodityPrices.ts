@@ -41,13 +41,15 @@ export const useCommodityPrices = () => {
         } else {
           throw new Error('Invalid API response format');
         }
-      } catch (error: any) {
-        console.error('Failed to fetch commodity prices:', error.message);
-        setPrices({
-          gold: 0,
-          silver: 0,
-          error: 'Failed to fetch prices. Please try again later.',
-        });
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error('Failed to fetch commodity prices:', error.message);
+          setPrices({
+            gold: 0,
+            silver: 0,
+            error: 'Failed to fetch prices. Please try again later.',
+          });
+        }
       } finally {
         setLoading(false);
       }
