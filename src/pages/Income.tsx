@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useCurrency, Currency } from "@/contexts/CurrencyContext";
+import { useFilteredData } from "@/hooks/useFilteredData";
 import { FinancialCard } from "@/components/ui/financial-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, TrendingUp, Edit, Trash2, Filter } from "lucide-react";
 
-// Mock data
+// Mock data with more diverse dates for testing
 const mockIncomes = [
   {
     id: 1,
@@ -31,7 +32,7 @@ const mockIncomes = [
     currency: "USD",
     category: "freelance",
     status: "received",
-    date: "2024-01-15"
+    date: "2025-01-15"
   },
   {
     id: 2,
@@ -40,7 +41,7 @@ const mockIncomes = [
     currency: "USD", 
     category: "commission",
     status: "expected",
-    date: "2024-01-28"
+    date: "2025-01-28"
   },
   {
     id: 3,
@@ -49,7 +50,36 @@ const mockIncomes = [
     currency: "TRY",
     category: "rent",
     status: "received",
-    date: "2024-01-01"
+    date: "2025-01-01"
+  },
+  // Previous month data
+  {
+    id: 4,
+    title: "Freelance Mobile App",
+    amount: 3000,
+    currency: "USD",
+    category: "freelance",
+    status: "received",
+    date: "2024-12-10"
+  },
+  {
+    id: 5,
+    title: "Consulting Fee",
+    amount: 1200,
+    currency: "USD",
+    category: "commission",
+    status: "received",
+    date: "2024-12-05"
+  },
+  // November data
+  {
+    id: 6,
+    title: "Photography Session",
+    amount: 500,
+    currency: "USD",
+    category: "freelance",
+    status: "received",
+    date: "2024-11-20"
   }
 ];
 
@@ -59,6 +89,9 @@ export default function Income() {
   const [filter, setFilter] = useState("all");
   const { formatCurrency } = useCurrency();
 
+  // Filter incomes by selected month
+  const filteredIncomesByMonth = useFilteredData(incomes);
+
   const getStatusColor = (status: string) => {
     return status === "received" ? "bg-income" : "bg-orange-500";
   };
@@ -67,21 +100,21 @@ export default function Income() {
     return <TrendingUp className="h-4 w-4" />;
   };
 
-  const filteredIncomes = incomes.filter(income => {
+  const filteredIncomes = filteredIncomesByMonth.filter(income => {
     if (filter === "all") return true;
     return income.status === filter;
   });
 
-  const totalExpected = incomes
+  const totalExpected = filteredIncomesByMonth
     .filter(i => i.status === "expected")
     .reduce((sum, i) => sum + i.amount, 0);
 
-  const totalReceived = incomes
+  const totalReceived = filteredIncomesByMonth
     .filter(i => i.status === "received") 
     .reduce((sum, i) => sum + i.amount, 0);
 
-  // Calculate income by category
-  const incomeByCategory = incomes.reduce((acc, income) => {
+  // Calculate income by category for filtered month
+  const incomeByCategory = filteredIncomesByMonth.reduce((acc, income) => {
     const category = income.category;
     acc[category] = (acc[category] || 0) + income.amount;
     return acc;

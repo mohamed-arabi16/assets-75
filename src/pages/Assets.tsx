@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useFilteredData } from "@/hooks/useFilteredData";
 import { useCommodityPrices } from "@/hooks/useCommodityPrices";
 import { FinancialCard } from "@/components/ui/financial-card";
 import { Button } from "@/components/ui/button";
@@ -49,8 +50,8 @@ interface Asset {
   auto_update: boolean;
 }
 
-// Mock data
-const mockAssets: Asset[] = [
+// Mock data with dates for filtering
+const mockAssets: (Asset & { date: string })[] = [
   {
     id: "1",
     type: "silver",
@@ -59,7 +60,8 @@ const mockAssets: Asset[] = [
     price_per_unit: 0.85,
     currency: "USD",
     total_value: 127.5,
-    auto_update: true
+    auto_update: true,
+    date: "2025-01-15" // Purchase/record date
   },
   {
     id: "2",
@@ -69,7 +71,8 @@ const mockAssets: Asset[] = [
     price_per_unit: 45000,
     currency: "USD", 
     total_value: 2250,
-    auto_update: true
+    auto_update: true,
+    date: "2025-01-10"
   },
   {
     id: "3",
@@ -79,12 +82,37 @@ const mockAssets: Asset[] = [
     price_per_unit: 250000,
     currency: "USD",
     total_value: 250000,
-    auto_update: false
+    auto_update: false,
+    date: "2025-01-01"
+  },
+  // Previous month data
+  {
+    id: "4",
+    type: "gold",
+    quantity: 10,
+    unit: "grams",
+    price_per_unit: 65,
+    currency: "USD",
+    total_value: 650,
+    auto_update: true,
+    date: "2024-12-20"
+  },
+  // November data
+  {
+    id: "5",
+    type: "silver",
+    quantity: 100,
+    unit: "grams",
+    price_per_unit: 0.85,
+    currency: "USD",
+    total_value: 85,
+    auto_update: true,
+    date: "2024-11-15"
   }
 ];
 
 export default function Assets() {
-  const [assets, setAssets] = useState<Asset[]>(mockAssets);
+  const [assets, setAssets] = useState<(Asset & { date: string })[]>(mockAssets);
   const [isAddingAsset, setIsAddingAsset] = useState(false);
   const { formatCurrency } = useCurrency();
   const { prices: commodityPrices, loading: pricesLoading } = useCommodityPrices();
@@ -94,7 +122,7 @@ export default function Assets() {
       const { data } = await supabase.from('assets').select('*');
       if (data && data.length > 0) {
         // Update prices for silver and gold assets with real market data
-        const updatedAssets = data.map((asset: Asset) => {
+        const updatedAssets = data.map((asset: Asset & { date: string }) => {
           if (asset.type === 'silver' && asset.auto_update) {
             return {
               ...asset,
@@ -110,7 +138,7 @@ export default function Assets() {
           }
           return asset;
         });
-        setAssets(updatedAssets as Asset[]);
+        setAssets(updatedAssets);
       } else {
         // Use mock data with real commodity prices
         const updatedMockAssets = mockAssets.map(asset => {
@@ -138,10 +166,13 @@ export default function Assets() {
     }
   }, [commodityPrices, pricesLoading]);
 
-  const totalAssetValue = assets.reduce((sum, asset) => sum + asset.total_value, 0);
-  const silverValue = assets.filter(a => a.type === "silver").reduce((sum, a) => sum + a.total_value, 0);
-  const cryptoValue = assets.filter(a => a.type === "bitcoin").reduce((sum, a) => sum + a.total_value, 0);
-  const realEstateValue = assets.filter(a => a.type === "real_estate").reduce((sum, a) => sum + a.total_value, 0);
+  // Filter assets by selected month
+  const filteredAssetsByMonth = useFilteredData(assets);
+
+  const totalAssetValue = filteredAssetsByMonth.reduce((sum, asset) => sum + asset.total_value, 0);
+  const silverValue = filteredAssetsByMonth.filter(a => a.type === "silver").reduce((sum, a) => sum + a.total_value, 0);
+  const cryptoValue = filteredAssetsByMonth.filter(a => a.type === "bitcoin").reduce((sum, a) => sum + a.total_value, 0);
+  const realEstateValue = filteredAssetsByMonth.filter(a => a.type === "real_estate").reduce((sum, a) => sum + a.total_value, 0);
 
   const getAssetIcon = (type: string) => {
     switch (type) {
@@ -290,7 +321,7 @@ export default function Assets() {
         
         <div className="p-4 sm:p-6">
           <div className="grid gap-4">
-            {assets.map((asset) => (
+            {filteredAssetsByMonth.map((asset) => (
               <Card key={asset.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

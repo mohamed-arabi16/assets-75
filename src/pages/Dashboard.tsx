@@ -8,16 +8,31 @@ import {
   Calendar
 } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useDate } from "@/contexts/DateContext";
 
 export default function Dashboard() {
   const { formatCurrency } = useCurrency();
+  const { selectedMonth, isCurrentMonth } = useDate();
+
+  // Show different message based on selected month
+  const getSubtitle = () => {
+    if (isCurrentMonth()) {
+      return "Overview of your financial health and current balance";
+    } else {
+      const [year, month] = selectedMonth.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1);
+      const monthName = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+      return `Financial overview for ${monthName}`;
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 space-y-6 bg-gradient-dashboard min-h-screen">
       {/* Page Header */}
       <div className="space-y-2">
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Financial Dashboard</h1>
         <p className="text-muted-foreground">
-          Overview of your financial health and current balance
+          {getSubtitle()}
         </p>
       </div>
 

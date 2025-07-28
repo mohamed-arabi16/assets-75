@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useFilteredData } from "@/hooks/useFilteredData";
 import { FinancialCard } from "@/components/ui/financial-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,7 @@ import {
 } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 
-// Mock data
+// Mock data with dates for filtering (using creation/record date)
 const mockDebts = [
   {
     id: 1,
@@ -31,7 +32,8 @@ const mockDebts = [
     currency: "USD",
     dueDate: "2025-06-30",
     status: "pending",
-    type: "short"
+    type: "short",
+    date: "2025-01-10" // When debt was recorded
   },
   {
     id: 2,
@@ -41,7 +43,8 @@ const mockDebts = [
     currency: "USD", 
     dueDate: "2025-02-15",
     status: "pending",
-    type: "short"
+    type: "short",
+    date: "2025-01-05"
   },
   {
     id: 3,
@@ -51,7 +54,8 @@ const mockDebts = [
     currency: "USD",
     dueDate: null,
     status: "pending", 
-    type: "long"
+    type: "long",
+    date: "2025-01-01"
   },
   {
     id: 4,
@@ -61,7 +65,19 @@ const mockDebts = [
     currency: "USD",
     dueDate: null,
     status: "pending",
-    type: "long"
+    type: "long",
+    date: "2024-12-15" // Previous month
+  },
+  {
+    id: 5,
+    title: "Personal Loan",
+    creditor: "Bank XYZ",
+    amount: 5000,
+    currency: "USD",
+    dueDate: "2025-03-01",
+    status: "pending",
+    type: "short",
+    date: "2024-11-20" // November
   }
 ];
 
@@ -70,13 +86,16 @@ export default function Debts() {
   const [activeTab, setActiveTab] = useState("short");
   const { formatCurrency } = useCurrency();
 
-  const shortTermDebts = debts.filter(debt => debt.type === "short");
-  const longTermDebts = debts.filter(debt => debt.type === "long");
+  // Filter debts by selected month
+  const filteredDebtsByMonth = useFilteredData(debts);
+
+  const shortTermDebts = filteredDebtsByMonth.filter(debt => debt.type === "short");
+  const longTermDebts = filteredDebtsByMonth.filter(debt => debt.type === "long");
   
   const totalShortTerm = shortTermDebts.reduce((sum, debt) => sum + debt.amount, 0);
   const totalLongTerm = longTermDebts.reduce((sum, debt) => sum + debt.amount, 0);
-  const totalPending = debts.filter(debt => debt.status === "pending").reduce((sum, debt) => sum + debt.amount, 0);
-  const totalPaid = debts.filter(debt => debt.status === "paid").reduce((sum, debt) => sum + debt.amount, 0);
+  const totalPending = filteredDebtsByMonth.filter(debt => debt.status === "pending").reduce((sum, debt) => sum + debt.amount, 0);
+  const totalPaid = filteredDebtsByMonth.filter(debt => debt.status === "paid").reduce((sum, debt) => sum + debt.amount, 0);
 
   const filteredDebts = activeTab === "short" ? shortTermDebts : longTermDebts;
 

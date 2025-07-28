@@ -38,8 +38,9 @@ import {
   Plus
 } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useFilteredData, useMonthlyStats } from "@/hooks/useFilteredData";
 
-// Mock data
+// Mock data with more diverse dates for testing
 const mockExpenses = [
   {
     id: 1,
@@ -90,6 +91,38 @@ const mockExpenses = [
     date: "2025-01-01",
     status: "paid",
     type: "fixed"
+  },
+  // Previous month data
+  {
+    id: 6,
+    title: "Office Rent",
+    category: "Business",
+    amount: 1200,
+    currency: "USD",
+    date: "2024-12-15",
+    status: "paid",
+    type: "fixed"
+  },
+  {
+    id: 7,
+    title: "Vacation Expenses",
+    category: "Travel",
+    amount: 450,
+    currency: "USD",
+    date: "2024-12-20",
+    status: "paid",
+    type: "variable"
+  },
+  // November data
+  {
+    id: 8,
+    title: "Black Friday Shopping",
+    category: "Shopping",
+    amount: 200,
+    currency: "USD",
+    date: "2024-11-29",
+    status: "paid",
+    type: "variable"
   }
 ];
 
@@ -99,13 +132,16 @@ export default function Expenses() {
   const [isAddingExpense, setIsAddingExpense] = useState(false);
   const { formatCurrency } = useCurrency();
 
-  const fixedExpenses = expenses.filter(expense => expense.type === "fixed");
-  const variableExpenses = expenses.filter(expense => expense.type === "variable");
+  // Filter expenses by selected month
+  const filteredExpensesByMonth = useFilteredData(expenses);
+  
+  const fixedExpenses = filteredExpensesByMonth.filter(expense => expense.type === "fixed");
+  const variableExpenses = filteredExpensesByMonth.filter(expense => expense.type === "variable");
   
   const totalFixed = fixedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const totalVariable = variableExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const totalPaid = expenses.filter(expense => expense.status === "paid").reduce((sum, expense) => sum + expense.amount, 0);
-  const totalPending = expenses.filter(expense => expense.status === "pending").reduce((sum, expense) => sum + expense.amount, 0);
+  const totalPaid = filteredExpensesByMonth.filter(expense => expense.status === "paid").reduce((sum, expense) => sum + expense.amount, 0);
+  const totalPending = filteredExpensesByMonth.filter(expense => expense.status === "pending").reduce((sum, expense) => sum + expense.amount, 0);
 
   const filteredExpenses = activeTab === "fixed" ? fixedExpenses : variableExpenses;
 
