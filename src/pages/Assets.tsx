@@ -71,6 +71,40 @@ export default function Assets() {
   const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null);
   const { formatCurrency, currency } = useCurrency();
   const { prices: commodityPrices, loading: pricesLoading } = useCommodityPrices();
+  const [newAsset, setNewAsset] = useState({
+    type: '',
+    quantity: '',
+    unit: '',
+    price_per_unit: '',
+    currency: 'USD',
+    total_value: 0,
+    auto_update: false,
+  });
+
+  const handleAddAsset = async () => {
+    const asset = {
+      ...newAsset,
+      quantity: parseFloat(newAsset.quantity),
+      price_per_unit: parseFloat(newAsset.price_per_unit),
+      total_value: parseFloat(newAsset.quantity) * parseFloat(newAsset.price_per_unit)
+    };
+    const { data, error } = await supabase.from('assets').insert([asset]).select();
+    if (error) {
+      console.error('Error adding asset:', error);
+    } else if (data) {
+      setAssets([...assets, data[0]]);
+      setIsAddingAsset(false);
+      setNewAsset({
+        type: '',
+        quantity: '',
+        unit: '',
+        price_per_unit: '',
+        currency: 'USD',
+        total_value: 0,
+        auto_update: false,
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchAssets = async () => {
@@ -219,7 +253,7 @@ export default function Assets() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="asset-type">Asset Type</Label>
-                <Select>
+                <Select value={newAsset.type} onValueChange={(value) => setNewAsset({ ...newAsset, type: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select asset type" />
                   </SelectTrigger>
@@ -236,11 +270,11 @@ export default function Assets() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="quantity">Quantity</Label>
-                  <Input id="quantity" type="number" step="0.001" placeholder="0.00" />
+                  <Input id="quantity" type="number" step="0.001" placeholder="0.00" value={newAsset.quantity} onChange={(e) => setNewAsset({ ...newAsset, quantity: e.target.value })} />
                 </div>
                 <div>
                   <Label htmlFor="unit">Unit</Label>
-                  <Select>
+                  <Select value={newAsset.unit} onValueChange={(value) => setNewAsset({ ...newAsset, unit: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select unit" />
                     </SelectTrigger>
@@ -257,13 +291,13 @@ export default function Assets() {
               </div>
               <div>
                 <Label htmlFor="price-per-unit">Price per Unit</Label>
-                <Input id="price-per-unit" type="number" step="0.01" placeholder="0.00" />
+                <Input id="price-per-unit" type="number" step="0.01" placeholder="0.00" value={newAsset.price_per_unit} onChange={(e) => setNewAsset({ ...newAsset, price_per_unit: e.target.value })} />
               </div>
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setIsAddingAsset(false)}>
                   Cancel
                 </Button>
-                <Button className="bg-gradient-primary">
+                <Button className="bg-gradient-primary" onClick={handleAddAsset}>
                   Add Asset
                 </Button>
               </div>
@@ -392,7 +426,7 @@ export default function Assets() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="asset-type">Asset Type</Label>
-                  <Select name="type" value={editFormData.type} onValueChange={(value) => setEditFormData(prev => ({ ...prev, type: value }))}>
+                  <Select name="type" value={editFormData.type} onValueChange={(value) => handleInputChange({ target: { name: 'type', value } } as React.ChangeEvent<HTMLSelectElement>)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select asset type" />
                     </SelectTrigger>
@@ -413,7 +447,7 @@ export default function Assets() {
                   </div>
                   <div>
                     <Label htmlFor="unit">Unit</Label>
-                    <Select name="unit" value={editFormData.unit} onValueChange={(value) => setEditFormData(prev => ({ ...prev, unit: value }))}>
+                    <Select name="unit" value={editFormData.unit} onValueChange={(value) => handleInputChange({ target: { name: 'unit', value } } as React.ChangeEvent<HTMLSelectElement>)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select unit" />
                       </SelectTrigger>
@@ -435,7 +469,7 @@ export default function Assets() {
                   </div>
                   <div>
                     <Label htmlFor="currency">Currency</Label>
-                    <Select name="currency" value={editFormData.currency} onValueChange={(value) => setEditFormData(prev => ({ ...prev, currency: value }))}>
+                    <Select name="currency" value={editFormData.currency} onValueChange={(value) => handleInputChange({ target: { name: 'currency', value } } as React.ChangeEvent<HTMLSelectElement>)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select currency" />
                       </SelectTrigger>

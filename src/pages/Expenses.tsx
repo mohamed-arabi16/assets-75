@@ -71,6 +71,34 @@ export default function Expenses() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
   const { formatCurrency, currency } = useCurrency();
+  const [newExpense, setNewExpense] = useState({
+    title: '',
+    amount: '',
+    currency: 'USD',
+    category: '',
+    type: '',
+    date: '',
+    status: 'pending'
+  });
+
+  const handleAddExpense = async () => {
+    const { data, error } = await supabase.from('expenses').insert([newExpense]).select();
+    if (error) {
+      console.error('Error adding expense:', error);
+    } else if (data) {
+      setExpenses([...expenses, data[0]]);
+      setIsAddingExpense(false);
+      setNewExpense({
+        title: '',
+        amount: '',
+        currency: 'USD',
+        category: '',
+        type: '',
+        date: '',
+        status: 'pending'
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchExpenses = async () => {
@@ -196,16 +224,16 @@ export default function Expenses() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="title">Title</Label>
-                <Input id="title" placeholder="e.g., Office Rent" />
+                <Input id="title" placeholder="e.g., Office Rent" value={newExpense.title} onChange={(e) => setNewExpense({ ...newExpense, title: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="amount">Amount</Label>
-                  <Input id="amount" type="number" placeholder="0.00" />
+                  <Input id="amount" type="number" placeholder="0.00" value={newExpense.amount} onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })} />
                 </div>
                 <div>
                   <Label htmlFor="currency">Currency</Label>
-                  <Select>
+                  <Select value={newExpense.currency} onValueChange={(value) => setNewExpense({ ...newExpense, currency: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="USD" />
                     </SelectTrigger>
@@ -218,7 +246,7 @@ export default function Expenses() {
               </div>
               <div>
                 <Label htmlFor="category">Category</Label>
-                <Select>
+                <Select value={newExpense.category} onValueChange={(value) => setNewExpense({ ...newExpense, category: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -234,7 +262,7 @@ export default function Expenses() {
               </div>
               <div>
                 <Label htmlFor="type">Type</Label>
-                <Select>
+                <Select value={newExpense.type} onValueChange={(value) => setNewExpense({ ...newExpense, type: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
@@ -246,13 +274,13 @@ export default function Expenses() {
               </div>
               <div>
                 <Label htmlFor="date">Date</Label>
-                <Input id="date" type="date" />
+                <Input id="date" type="date" value={newExpense.date} onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })} />
               </div>
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setIsAddingExpense(false)}>
                   Cancel
                 </Button>
-                <Button className="bg-gradient-primary">
+                <Button className="bg-gradient-primary" onClick={handleAddExpense}>
                   Add Expense
                 </Button>
               </div>
@@ -477,7 +505,7 @@ export default function Expenses() {
                   </div>
                   <div>
                     <Label htmlFor="currency">Currency</Label>
-                    <Select name="currency" value={editFormData.currency} onValueChange={(value) => setEditFormData(prev => ({ ...prev, currency: value }))}>
+                    <Select name="currency" value={editFormData.currency} onValueChange={(value) => handleInputChange({ target: { name: 'currency', value } } as React.ChangeEvent<HTMLSelectElement>)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select currency" />
                       </SelectTrigger>
@@ -494,7 +522,7 @@ export default function Expenses() {
                 </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
-                  <Select name="status" value={editFormData.status} onValueChange={(value) => setEditFormData(prev => ({ ...prev, status: value }))}>
+                  <Select name="status" value={editFormData.status} onValueChange={(value) => handleInputChange({ target: { name: 'status', value } } as React.ChangeEvent<HTMLSelectElement>)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
