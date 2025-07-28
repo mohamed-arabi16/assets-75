@@ -26,27 +26,36 @@ interface CurrencyProviderProps {
 
 export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) => {
   const [currency, setCurrency] = useState<Currency>('USD');
-  const [exchangeRate, setExchangeRate] = useState<number>(34.5); // Default TRY/USD rate
+  const [exchangeRate, setExchangeRate] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch exchange rate when currency changes
   useEffect(() => {
     const fetchExchangeRate = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        // Using a free exchange rate API
         const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+        }
         const data = await response.json();
         if (data.rates && data.rates.TRY) {
           setExchangeRate(data.rates.TRY);
+        } else {
+          throw new Error('TRY exchange rate not found in API response');
         }
-      } catch (error) {
-        console.warn('Failed to fetch exchange rate, using default:', error);
-        // Keep the default rate of 34.5 if API fails
+      } catch (error: any) {
+        console.error('Failed to fetch exchange rate:', error.message);
+        setError('Failed to fetch exchange rate. Please try again later.');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchExchangeRate();
-    // Update exchange rate every hour
-    const interval = setInterval(fetchExchangeRate, 3600000);
+
+    const interval = setInterval(fetchExchangeRate, 60000); // Fetches every minute
     
     return () => clearInterval(interval);
   }, []);

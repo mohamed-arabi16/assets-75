@@ -53,33 +53,31 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(true); // Start collapsed on desktop for better space
+  const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
 
   return (
     <>
-      {/* Mobile overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
+      <div
+        className={cn(
+          "fixed inset-0 bg-black/60 z-40 lg:hidden",
+          isMobileMenuOpen ? "block" : "hidden"
+        )}
+        onClick={() => setIsMobileMenuOpen(false)}
+      />
       
       <div className={cn(
-        "relative flex flex-col h-screen bg-gradient-card border-r border-border transition-all duration-300 ease-smooth",
+        "relative flex flex-col h-screen bg-gradient-card border-r border-border transition-all duration-300 ease-in-out",
         "lg:relative lg:translate-x-0",
-        // Mobile styles
-        "fixed z-50 lg:z-auto",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-        // Width styles
-        isMobileMenuOpen ? "w-64" : collapsed ? "w-16" : "w-64"
+        "fixed z-50",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
+        collapsed ? "w-16" : "w-64"
       )}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="flex items-center justify-between p-4 border-b border-border h-16">
         <div className={cn(
           "flex items-center gap-2 transition-opacity duration-200",
-          collapsed && "opacity-0 pointer-events-none"
+          collapsed && "opacity-0 pointer-events-none w-0"
         )}>
           <div className="flex items-center justify-center w-8 h-8 bg-gradient-primary rounded-lg">
             <DollarSign className="w-5 h-5 text-primary-foreground" />
