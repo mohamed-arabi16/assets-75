@@ -36,7 +36,7 @@ import { Plus, TrendingUp, Edit, Trash2, Filter } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 interface Income {
-  id: number;
+  id: string;
   title: string;
   amount: number;
   currency: string;
@@ -127,8 +127,18 @@ export default function Income() {
       date: formData.get('date') as string,
     };
 
-    await supabase.from('incomes').update(updatedIncome).match({ id: editingIncome.id });
-    setIncomes(incomes.map(income => (income.id === editingIncome.id ? { ...income, ...updatedIncome } : income)));
+    const { data, error } = await supabase
+      .from('incomes')
+      .update(updatedIncome)
+      .match({ id: editingIncome.id })
+      .select();
+
+    if (error) {
+      console.error('Error updating income:', error);
+      return;
+    }
+
+    setIncomes(incomes.map(income => (income.id === editingIncome.id ? data[0] : income)));
     setIsEditingIncome(false);
     setEditingIncome(null);
   };

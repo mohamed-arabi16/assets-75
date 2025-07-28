@@ -52,7 +52,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { supabase } from "@/lib/supabaseClient";
 
 interface Debt {
-  id: number;
+  id: string;
   title: string;
   creditor: string;
   amount: number;
