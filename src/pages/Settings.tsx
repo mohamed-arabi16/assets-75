@@ -23,15 +23,9 @@ export default function Settings() {
 
   const handleExportData = async () => {
     try {
-      // Mock data for CSV export
-      const data = [
-        ['Date', 'Type', 'Amount', 'Description'],
-        ['2024-01-15', 'Income', '2500', 'Freelance Web Design'],
-        ['2024-01-16', 'Expense', '-85', 'Office Supplies'],
-        ['2024-01-17', 'Asset', '45200', 'Silver Holdings'],
-      ];
-      
-      const csvContent = data.map(row => row.join(',')).join('\n');
+      // TODO: Fetch real data for CSV export
+      const data = [['Date', 'Type', 'Amount', 'Description']];
+      const csvContent = data.map(e => e.join(",")).join("\n");
       const blob = new Blob([csvContent], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
