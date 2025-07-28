@@ -56,67 +56,8 @@ interface Debt {
   date: string;
 }
 
-// Mock data with dates for filtering (using creation/record date)
-const mockDebts: Debt[] = [
-  {
-    id: 1,
-    title: "Phone Installment",
-    creditor: "Phone Company", 
-    amount: 1150,
-    currency: "USD",
-    dueDate: "2025-06-30",
-    status: "pending",
-    type: "short",
-    date: "2025-01-10" // When debt was recorded
-  },
-  {
-    id: 2,
-    title: "Credit Card",
-    creditor: "Bank ABC",
-    amount: 2500,
-    currency: "USD", 
-    dueDate: "2025-02-15",
-    status: "pending",
-    type: "short",
-    date: "2025-01-05"
-  },
-  {
-    id: 3,
-    title: "Student Loan",
-    creditor: "Education Finance",
-    amount: 25000,
-    currency: "USD",
-    dueDate: null,
-    status: "pending", 
-    type: "long",
-    date: "2025-01-01"
-  },
-  {
-    id: 4,
-    title: "Car Loan",
-    creditor: "Auto Finance",
-    amount: 18000,
-    currency: "USD",
-    dueDate: null,
-    status: "pending",
-    type: "long",
-    date: "2024-12-15" // Previous month
-  },
-  {
-    id: 5,
-    title: "Personal Loan",
-    creditor: "Bank XYZ",
-    amount: 5000,
-    currency: "USD",
-    dueDate: "2025-03-01",
-    status: "pending",
-    type: "short",
-    date: "2024-11-20" // November
-  }
-];
-
 export default function Debts() {
-  const [debts, setDebts] = useState(mockDebts);
+  const [debts, setDebts] = useState<Debt[]>([]);
   const [activeTab, setActiveTab] = useState("short");
   const [isEditingDebt, setIsEditingDebt] = useState(false);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);

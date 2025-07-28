@@ -45,68 +45,8 @@ interface Income {
   date: string;
 }
 
-// Mock data with more diverse dates for testing
-const mockIncomes: Income[] = [
-  {
-    id: 1,
-    title: "Freelance Web Design",
-    amount: 2500,
-    currency: "USD",
-    category: "freelance",
-    status: "received",
-    date: "2025-01-15"
-  },
-  {
-    id: 2,
-    title: "Student Commission",
-    amount: 800,
-    currency: "USD", 
-    category: "commission",
-    status: "expected",
-    date: "2025-01-28"
-  },
-  {
-    id: 3,
-    title: "Rental Income",
-    amount: 15000,
-    currency: "TRY",
-    category: "rent",
-    status: "received",
-    date: "2025-01-01"
-  },
-  // Previous month data
-  {
-    id: 4,
-    title: "Freelance Mobile App",
-    amount: 3000,
-    currency: "USD",
-    category: "freelance",
-    status: "received",
-    date: "2024-12-10"
-  },
-  {
-    id: 5,
-    title: "Consulting Fee",
-    amount: 1200,
-    currency: "USD",
-    category: "commission",
-    status: "received",
-    date: "2024-12-05"
-  },
-  // November data
-  {
-    id: 6,
-    title: "Photography Session",
-    amount: 500,
-    currency: "USD",
-    category: "freelance",
-    status: "received",
-    date: "2024-11-20"
-  }
-];
-
 export default function Income() {
-  const [incomes, setIncomes] = useState(mockIncomes);
+  const [incomes, setIncomes] = useState<Income[]>([]);
   const [isAddingIncome, setIsAddingIncome] = useState(false);
   const [isEditingIncome, setIsEditingIncome] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);

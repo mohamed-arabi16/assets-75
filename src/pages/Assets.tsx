@@ -62,69 +62,8 @@ interface Asset {
   auto_update: boolean;
 }
 
-// Mock data with dates for filtering
-const mockAssets: (Asset & { date: string })[] = [
-  {
-    id: "1",
-    type: "silver",
-    quantity: 150,
-    unit: "grams",
-    price_per_unit: 0.85,
-    currency: "USD",
-    total_value: 127.5,
-    auto_update: true,
-    date: "2025-01-15" // Purchase/record date
-  },
-  {
-    id: "2",
-    type: "bitcoin",
-    quantity: 0.05,
-    unit: "BTC",
-    price_per_unit: 45000,
-    currency: "USD", 
-    total_value: 2250,
-    auto_update: true,
-    date: "2025-01-10"
-  },
-  {
-    id: "3",
-    type: "real_estate",
-    quantity: 1,
-    unit: "property",
-    price_per_unit: 250000,
-    currency: "USD",
-    total_value: 250000,
-    auto_update: false,
-    date: "2025-01-01"
-  },
-  // Previous month data
-  {
-    id: "4",
-    type: "gold",
-    quantity: 10,
-    unit: "grams",
-    price_per_unit: 65,
-    currency: "USD",
-    total_value: 650,
-    auto_update: true,
-    date: "2024-12-20"
-  },
-  // November data
-  {
-    id: "5",
-    type: "silver",
-    quantity: 100,
-    unit: "grams",
-    price_per_unit: 0.85,
-    currency: "USD",
-    total_value: 85,
-    auto_update: true,
-    date: "2024-11-15"
-  }
-];
-
 export default function Assets() {
-  const [assets, setAssets] = useState<(Asset & { date: string })[]>(mockAssets);
+  const [assets, setAssets] = useState<(Asset & { date: string })[]>([]);
   const [isAddingAsset, setIsAddingAsset] = useState(false);
   const [isEditingAsset, setIsEditingAsset] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
@@ -155,25 +94,6 @@ export default function Assets() {
           return asset;
         });
         setAssets(updatedAssets);
-      } else {
-        // Use mock data with real commodity prices
-        const updatedMockAssets = mockAssets.map(asset => {
-          if (asset.type === 'silver') {
-            return {
-              ...asset,
-              price_per_unit: commodityPrices.silver,
-              total_value: asset.quantity * commodityPrices.silver
-            };
-          } else if (asset.type === 'gold') {
-            return {
-              ...asset,
-              price_per_unit: commodityPrices.gold,
-              total_value: asset.quantity * commodityPrices.gold
-            };
-          }
-          return asset;
-        });
-        setAssets(updatedMockAssets);
       }
     };
     
