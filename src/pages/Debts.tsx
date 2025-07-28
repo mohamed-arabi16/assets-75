@@ -196,14 +196,34 @@ export default function Debts() {
     e.preventDefault();
     if (!editingDebt) return;
 
-    const { error } = await supabase.rpc('update_debt_amount', {
+    // update basic debt fields
+    const updatePayload = {
+      title: editFormData.title,
+      creditor: editFormData.creditor,
+      due_date: editFormData.dueDate || null,
+      status: editFormData.status,
+      currency: editFormData.currency,
+    };
+
+    const { error: updateError } = await supabase
+      .from('debts')
+      .update(updatePayload)
+      .match({ id: editingDebt.id });
+
+    if (updateError) {
+      console.error('Error updating debt details:', updateError);
+      return;
+    }
+
+    // update amount and keep history via RPC
+    const { error: amountError } = await supabase.rpc('update_debt_amount', {
       in_debt_id: editingDebt.id,
       in_new_amount: parseFloat(String(editFormData.amount)),
       in_note: note,
     });
 
-    if (error) {
-      console.error('Error updating debt:', error);
+    if (amountError) {
+      console.error('Error updating debt amount:', amountError);
       return;
     }
 
