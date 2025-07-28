@@ -82,7 +82,14 @@ export default function Expenses() {
   });
 
   const handleAddExpense = async () => {
-    const { data, error } = await supabase.from('expenses').insert([newExpense]).select();
+    const payload = {
+      ...newExpense,
+      amount: parseFloat(String(newExpense.amount)),
+    };
+    const { data, error } = await supabase
+      .from('expenses')
+      .insert([payload])
+      .select();
     if (error) {
       console.error('Error adding expense:', error);
     } else if (data) {
@@ -180,9 +187,14 @@ export default function Expenses() {
     e.preventDefault();
     if (!editingExpense) return;
 
+    const payload = {
+      ...editFormData,
+      amount: parseFloat(String(editFormData.amount)),
+    };
+
     const { data, error } = await supabase
       .from('expenses')
-      .update(editFormData)
+      .update(payload)
       .match({ id: editingExpense.id })
       .select();
 

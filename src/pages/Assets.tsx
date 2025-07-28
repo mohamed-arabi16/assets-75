@@ -208,9 +208,18 @@ export default function Assets() {
     e.preventDefault();
     if (!editingAsset) return;
 
+    const payload = {
+      ...editFormData,
+      quantity: parseFloat(String(editFormData.quantity)),
+      price_per_unit: parseFloat(String(editFormData.price_per_unit)),
+      total_value:
+        parseFloat(String(editFormData.quantity)) *
+        parseFloat(String(editFormData.price_per_unit)),
+    };
+
     const { data, error } = await supabase
       .from('assets')
-      .update(editFormData)
+      .update(payload)
       .match({ id: editingAsset.id })
       .select();
 

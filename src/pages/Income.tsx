@@ -63,7 +63,14 @@ export default function Income() {
   });
 
   const handleAddIncome = async () => {
-    const { data, error } = await supabase.from('incomes').insert([newIncome]).select();
+    const payload = {
+      ...newIncome,
+      amount: parseFloat(newIncome.amount as unknown as string),
+    } as unknown as Omit<Income, "id">;
+    const { data, error } = await supabase
+      .from('incomes')
+      .insert([payload])
+      .select();
     if (error) {
       console.error('Error adding income:', error);
     } else if (data) {
@@ -166,9 +173,14 @@ export default function Income() {
     e.preventDefault();
     if (!editingIncome) return;
 
+    const payload = {
+      ...editFormData,
+      amount: parseFloat(String(editFormData.amount)),
+    };
+
     const { data, error } = await supabase
       .from('incomes')
-      .update(editFormData)
+      .update(payload)
       .match({ id: editingIncome.id })
       .select();
 
