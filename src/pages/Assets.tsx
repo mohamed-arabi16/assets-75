@@ -151,15 +151,30 @@ export default function Assets() {
     if (!editingAsset) return;
 
     const formData = new FormData(e.currentTarget);
+    const quantity = Number(formData.get('quantity'));
+    const price_per_unit = Number(formData.get('price-per-unit'));
+    const total_value = quantity * price_per_unit;
+
     const updatedAsset = {
       type: formData.get('asset-type') as string,
-      quantity: Number(formData.get('quantity')),
+      quantity,
       unit: formData.get('unit') as string,
-      price_per_unit: Number(formData.get('price-per-unit')),
+      price_per_unit,
+      total_value,
     };
 
-    await supabase.from('assets').update(updatedAsset).match({ id: editingAsset.id });
-    setAssets(assets.map(asset => (asset.id === editingAsset.id ? { ...asset, ...updatedAsset } : asset)));
+    const { data, error } = await supabase
+      .from('assets')
+      .update(updatedAsset)
+      .match({ id: editingAsset.id })
+      .select();
+
+    if (error) {
+      console.error('Error updating asset:', error);
+      return;
+    }
+
+    setAssets(assets.map(asset => (asset.id === editingAsset.id ? data[0] : asset)));
     setIsEditingAsset(false);
     setEditingAsset(null);
   };
