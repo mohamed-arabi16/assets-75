@@ -20,11 +20,33 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge";
 import { Plus, TrendingUp, Edit, Trash2, Filter } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
+
+interface Income {
+  id: number;
+  title: string;
+  amount: number;
+  currency: string;
+  category: string;
+  status: string;
+  date: string;
+}
 
 // Mock data with more diverse dates for testing
-const mockIncomes = [
+const mockIncomes: Income[] = [
   {
     id: 1,
     title: "Freelance Web Design",
@@ -86,6 +108,9 @@ const mockIncomes = [
 export default function Income() {
   const [incomes, setIncomes] = useState(mockIncomes);
   const [isAddingIncome, setIsAddingIncome] = useState(false);
+  const [isEditingIncome, setIsEditingIncome] = useState(false);
+  const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+  const [deletingIncome, setDeletingIncome] = useState<Income | null>(null);
   const [filter, setFilter] = useState("all");
   const { formatCurrency } = useCurrency();
 
@@ -119,6 +144,42 @@ export default function Income() {
     acc[category] = (acc[category] || 0) + income.amount;
     return acc;
   }, {} as Record<string, number>);
+
+  const handleEditClick = (income: Income) => {
+    setEditingIncome(income);
+    setIsEditingIncome(true);
+  };
+
+  const handleDeleteClick = (income: Income) => {
+    setDeletingIncome(income);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingIncome) return;
+    await supabase.from('incomes').delete().match({ id: deletingIncome.id });
+    setIncomes(incomes.filter(income => income.id !== deletingIncome.id));
+    setDeletingIncome(null);
+  };
+
+  const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingIncome) return;
+
+    const formData = new FormData(e.currentTarget);
+    const updatedIncome = {
+      ...editingIncome,
+      title: formData.get('title') as string,
+      amount: Number(formData.get('amount')),
+      category: formData.get('category') as string,
+      status: formData.get('status') as string,
+      date: formData.get('date') as string,
+    };
+
+    await supabase.from('incomes').update(updatedIncome).match({ id: editingIncome.id });
+    setIncomes(incomes.map(income => (income.id === editingIncome.id ? updatedIncome : income)));
+    setIsEditingIncome(false);
+    setEditingIncome(null);
+  };
 
   return (
     <div className="p-4 sm:p-6 space-y-6 bg-gradient-dashboard min-h-screen">
@@ -317,12 +378,28 @@ export default function Income() {
                   </div>
                   
                   <div className="flex gap-1 sm:gap-2">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => console.log('edit clicked')}>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEditClick(income)}>
                       <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => console.log('delete clicked')}>
-                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleDeleteClick(income)}>
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the income.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel onClick={() => setDeletingIncome(null)}>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </div>
@@ -330,6 +407,58 @@ export default function Income() {
           ))}
         </div>
       </div>
+      {editingIncome && (
+        <Dialog open={isEditingIncome} onOpenChange={setIsEditingIncome}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Income</DialogTitle>
+              <DialogDescription>
+                Update the details of your income.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleEdit}>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Title</Label>
+                  <Input name="title" defaultValue={editingIncome.title} />
+                </div>
+                <div>
+                  <Label htmlFor="amount">Amount</Label>
+                  <Input name="amount" type="number" step="0.01" defaultValue={editingIncome.amount} />
+                </div>
+                <div>
+                  <Label htmlFor="category">Category</Label>
+                  <Input name="category" defaultValue={editingIncome.category} />
+                </div>
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select name="status" defaultValue={editingIncome.status}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="expected">Expected</SelectItem>
+                      <SelectItem value="received">Received</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="date">Date</Label>
+                  <Input name="date" type="date" defaultValue={editingIncome.date} />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setIsEditingIncome(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-gradient-primary">
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

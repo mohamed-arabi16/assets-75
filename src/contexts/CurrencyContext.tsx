@@ -45,9 +45,11 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
         } else {
           throw new Error('TRY exchange rate not found in API response');
         }
-      } catch (error: any) {
-        console.error('Failed to fetch exchange rate:', error.message);
-        setError('Failed to fetch exchange rate. Please try again later.');
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error('Failed to fetch exchange rate:', error.message);
+          setError('Failed to fetch exchange rate. Please try again later.');
+        }
       } finally {
         setLoading(false);
       }

@@ -18,6 +18,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -39,9 +50,21 @@ import {
 } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useFilteredData, useMonthlyStats } from "@/hooks/useFilteredData";
+import { supabase } from "@/lib/supabaseClient";
+
+interface Expense {
+  id: number;
+  title: string;
+  category: string;
+  amount: number;
+  currency: string;
+  date: string;
+  status: string;
+  type: string;
+}
 
 // Mock data with more diverse dates for testing
-const mockExpenses = [
+const mockExpenses: Expense[] = [
   {
     id: 1,
     title: "Office Rent",
@@ -130,6 +153,9 @@ export default function Expenses() {
   const [expenses, setExpenses] = useState(mockExpenses);
   const [activeTab, setActiveTab] = useState("fixed");
   const [isAddingExpense, setIsAddingExpense] = useState(false);
+  const [isEditingExpense, setIsEditingExpense] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
   const { formatCurrency } = useCurrency();
 
   // Filter expenses by selected month
@@ -155,6 +181,41 @@ export default function Expenses() {
 
   const getStatusBadgeColor = (status: string) => {
     return status === "paid" ? "bg-green-100 text-green-600" : "bg-yellow-100 text-yellow-600";
+  };
+
+  const handleEditClick = (expense: Expense) => {
+    setEditingExpense(expense);
+    setIsEditingExpense(true);
+  };
+
+  const handleDeleteClick = (expense: Expense) => {
+    setDeletingExpense(expense);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingExpense) return;
+    await supabase.from('expenses').delete().match({ id: deletingExpense.id });
+    setExpenses(expenses.filter(expense => expense.id !== deletingExpense.id));
+    setDeletingExpense(null);
+  };
+
+  const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingExpense) return;
+
+    const formData = new FormData(e.currentTarget);
+    const updatedExpense = {
+      ...editingExpense,
+      title: formData.get('title') as string,
+      category: formData.get('category') as string,
+      amount: Number(formData.get('amount')),
+      date: formData.get('date') as string,
+    };
+
+    await supabase.from('expenses').update(updatedExpense).match({ id: editingExpense.id });
+    setExpenses(expenses.map(expense => (expense.id === editingExpense.id ? updatedExpense : expense)));
+    setIsEditingExpense(false);
+    setEditingExpense(null);
   };
 
   return (
@@ -344,12 +405,28 @@ export default function Expenses() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => console.log('edit clicked')}>
+                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => handleEditClick(expense)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => console.log('delete clicked')}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => handleDeleteClick(expense)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the expense.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => setDeletingExpense(null)}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -392,12 +469,28 @@ export default function Expenses() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => console.log('edit clicked')}>
+                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => handleEditClick(expense)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => console.log('delete clicked')}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => handleDeleteClick(expense)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the expense.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => setDeletingExpense(null)}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -408,6 +501,46 @@ export default function Expenses() {
           </Tabs>
         </div>
       </div>
+      {editingExpense && (
+        <Dialog open={isEditingExpense} onOpenChange={setIsEditingExpense}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Expense</DialogTitle>
+              <DialogDescription>
+                Update the details of your expense.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleEdit}>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Title</Label>
+                  <Input name="title" defaultValue={editingExpense.title} />
+                </div>
+                <div>
+                  <Label htmlFor="category">Category</Label>
+                  <Input name="category" defaultValue={editingExpense.category} />
+                </div>
+                <div>
+                  <Label htmlFor="amount">Amount</Label>
+                  <Input name="amount" type="number" step="0.01" defaultValue={editingExpense.amount} />
+                </div>
+                <div>
+                  <Label htmlFor="date">Date</Label>
+                  <Input name="date" type="date" defaultValue={editingExpense.date} />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setIsEditingExpense(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-gradient-primary">
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

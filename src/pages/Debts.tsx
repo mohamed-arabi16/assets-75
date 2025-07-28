@@ -12,6 +12,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   CreditCard, 
   AlertTriangle, 
@@ -21,9 +42,22 @@ import {
   Trash2
 } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { supabase } from "@/lib/supabaseClient";
+
+interface Debt {
+  id: number;
+  title: string;
+  creditor: string;
+  amount: number;
+  currency: string;
+  dueDate: string | null;
+  status: string;
+  type: string;
+  date: string;
+}
 
 // Mock data with dates for filtering (using creation/record date)
-const mockDebts = [
+const mockDebts: Debt[] = [
   {
     id: 1,
     title: "Phone Installment",
@@ -84,6 +118,9 @@ const mockDebts = [
 export default function Debts() {
   const [debts, setDebts] = useState(mockDebts);
   const [activeTab, setActiveTab] = useState("short");
+  const [isEditingDebt, setIsEditingDebt] = useState(false);
+  const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
+  const [deletingDebt, setDeletingDebt] = useState<Debt | null>(null);
   const { formatCurrency } = useCurrency();
 
   // Filter debts by selected month
@@ -106,6 +143,41 @@ export default function Debts() {
       month: 'short', 
       day: 'numeric'
     });
+  };
+
+  const handleEditClick = (debt: Debt) => {
+    setEditingDebt(debt);
+    setIsEditingDebt(true);
+  };
+
+  const handleDeleteClick = (debt: Debt) => {
+    setDeletingDebt(debt);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingDebt) return;
+    await supabase.from('debts').delete().match({ id: deletingDebt.id });
+    setDebts(debts.filter(debt => debt.id !== deletingDebt.id));
+    setDeletingDebt(null);
+  };
+
+  const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingDebt) return;
+
+    const formData = new FormData(e.currentTarget);
+    const updatedDebt = {
+      ...editingDebt,
+      title: formData.get('title') as string,
+      creditor: formData.get('creditor') as string,
+      amount: Number(formData.get('amount')),
+      dueDate: formData.get('dueDate') as string,
+    };
+
+    await supabase.from('debts').update(updatedDebt).match({ id: editingDebt.id });
+    setDebts(debts.map(debt => (debt.id === editingDebt.id ? updatedDebt : debt)));
+    setIsEditingDebt(false);
+    setEditingDebt(null);
   };
 
   return (
@@ -212,12 +284,28 @@ export default function Debts() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => console.log('edit clicked')}>
+                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => handleEditClick(debt)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => console.log('delete clicked')}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => handleDeleteClick(debt)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the debt.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => setDeletingDebt(null)}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -260,12 +348,28 @@ export default function Debts() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => console.log('edit clicked')}>
+                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => handleEditClick(debt)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => console.log('delete clicked')}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => handleDeleteClick(debt)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the debt.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => setDeletingDebt(null)}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -276,6 +380,46 @@ export default function Debts() {
           </Tabs>
         </div>
       </div>
+      {editingDebt && (
+        <Dialog open={isEditingDebt} onOpenChange={setIsEditingDebt}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Debt</DialogTitle>
+              <DialogDescription>
+                Update the details of your debt.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleEdit}>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Title</Label>
+                  <Input name="title" defaultValue={editingDebt.title} />
+                </div>
+                <div>
+                  <Label htmlFor="creditor">Creditor</Label>
+                  <Input name="creditor" defaultValue={editingDebt.creditor} />
+                </div>
+                <div>
+                  <Label htmlFor="amount">Amount</Label>
+                  <Input name="amount" type="number" step="0.01" defaultValue={editingDebt.amount} />
+                </div>
+                <div>
+                  <Label htmlFor="dueDate">Due Date</Label>
+                  <Input name="dueDate" type="date" defaultValue={editingDebt.dueDate || ''} />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setIsEditingDebt(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-gradient-primary">
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

@@ -20,7 +20,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { 
   Card,
   CardContent,
@@ -114,6 +126,10 @@ const mockAssets: (Asset & { date: string })[] = [
 export default function Assets() {
   const [assets, setAssets] = useState<(Asset & { date: string })[]>(mockAssets);
   const [isAddingAsset, setIsAddingAsset] = useState(false);
+  const [isEditingAsset, setIsEditingAsset] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [isDeletingAsset, setIsDeletingAsset] = useState(false);
+  const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null);
   const { formatCurrency } = useCurrency();
   const { prices: commodityPrices, loading: pricesLoading } = useCommodityPrices();
 
@@ -189,6 +205,43 @@ export default function Assets() {
 
   const formatAssetType = (type: string) => {
     return type.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const handleEditClick = (asset: Asset) => {
+    setEditingAsset(asset);
+    setIsEditingAsset(true);
+  };
+
+  const handleDeleteClick = (asset: Asset) => {
+    setDeletingAsset(asset);
+    setIsDeletingAsset(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingAsset) return;
+    await supabase.from('assets').delete().match({ id: deletingAsset.id });
+    setAssets(assets.filter(asset => asset.id !== deletingAsset.id));
+    setIsDeletingAsset(false);
+    setDeletingAsset(null);
+  };
+
+  const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingAsset) return;
+
+    const formData = new FormData(e.currentTarget);
+    const updatedAsset = {
+      ...editingAsset,
+      type: formData.get('asset-type') as string,
+      quantity: Number(formData.get('quantity')),
+      unit: formData.get('unit') as string,
+      price_per_unit: Number(formData.get('price-per-unit')),
+    };
+
+    await supabase.from('assets').update(updatedAsset).match({ id: editingAsset.id });
+    setAssets(assets.map(asset => (asset.id === editingAsset.id ? updatedAsset : asset)));
+    setIsEditingAsset(false);
+    setEditingAsset(null);
   };
 
   return (
@@ -349,12 +402,28 @@ export default function Assets() {
                       </div>
                       
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => console.log('edit clicked')}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEditClick(asset)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => console.log('delete clicked')}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleDeleteClick(asset)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the asset.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   </div>
@@ -364,6 +433,72 @@ export default function Assets() {
           </div>
         </div>
       </div>
+      {editingAsset && (
+        <Dialog open={isEditingAsset} onOpenChange={setIsEditingAsset}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Asset</DialogTitle>
+              <DialogDescription>
+                Update the details of your asset.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleEdit}>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="asset-type">Asset Type</Label>
+                  <Select name="asset-type" defaultValue={editingAsset.type}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select asset type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="silver">Silver</SelectItem>
+                      <SelectItem value="gold">Gold</SelectItem>
+                      <SelectItem value="bitcoin">Bitcoin</SelectItem>
+                      <SelectItem value="ethereum">Ethereum</SelectItem>
+                      <SelectItem value="real_estate">Real Estate</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="quantity">Quantity</Label>
+                    <Input name="quantity" type="number" step="0.001" defaultValue={editingAsset.quantity} />
+                  </div>
+                  <div>
+                    <Label htmlFor="unit">Unit</Label>
+                    <Select name="unit" defaultValue={editingAsset.unit}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="grams">Grams</SelectItem>
+                        <SelectItem value="ounces">Ounces</SelectItem>
+                        <SelectItem value="BTC">BTC</SelectItem>
+                        <SelectItem value="ETH">ETH</SelectItem>
+                        <SelectItem value="property">Property</SelectItem>
+                        <SelectItem value="shares">Shares</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="price-per-unit">Price per Unit</Label>
+                  <Input name="price-per-unit" type="number" step="0.01" defaultValue={editingAsset.price_per_unit} />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setIsEditingAsset(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-gradient-primary">
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
