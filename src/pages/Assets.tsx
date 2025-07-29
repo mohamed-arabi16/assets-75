@@ -175,7 +175,39 @@ function AssetCard({ asset, onDelete }: { asset: Asset; onDelete: () => void; })
 function AddAssetForm({ setDialogOpen }: { setDialogOpen: (open: boolean) => void }) {
   const { user } = useAuth();
   const addAssetMutation = useAddAsset();
-  const form = useForm<AssetFormValues>({ resolver: zodResolver(assetSchema), defaultValues: { type: "", quantity: undefined, unit: "", price_per_unit: undefined, currency: "USD", auto_update: false } });
+  const { prices: commodityPrices, loading: pricesLoading } = useCommodityPrices();
+  const form = useForm<AssetFormValues>({
+    resolver: zodResolver(assetSchema),
+    defaultValues: { type: "", quantity: undefined, unit: "", price_per_unit: undefined, currency: "USD", auto_update: false },
+  });
+
+  const assetType = form.watch("type");
+
+  useEffect(() => {
+    if (pricesLoading) return;
+    let price: number | undefined;
+    let unit: string | undefined;
+    let autoUpdate = false;
+
+    if (assetType === 'gold' && commodityPrices.gold) {
+      price = commodityPrices.gold;
+      unit = 'ounces';
+      autoUpdate = true;
+    } else if (assetType === 'silver' && commodityPrices.silver) {
+      price = commodityPrices.silver;
+      unit = 'ounces';
+      autoUpdate = true;
+    }
+
+    if (price !== undefined) {
+      form.setValue('price_per_unit', price, { shouldValidate: true });
+      form.setValue('auto_update', autoUpdate);
+    }
+    if (unit) {
+      form.setValue('unit', unit);
+    }
+  }, [assetType, commodityPrices, pricesLoading, form]);
+
 
   const onSubmit = (values: AssetFormValues) => {
     if (!user) return;
@@ -185,6 +217,8 @@ function AddAssetForm({ setDialogOpen }: { setDialogOpen: (open: boolean) => voi
     });
   };
 
+  const isPriceAuto = (assetType === 'gold' || assetType === 'silver') && !pricesLoading;
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -193,7 +227,26 @@ function AddAssetForm({ setDialogOpen }: { setDialogOpen: (open: boolean) => voi
           <FormField control={form.control} name="quantity" render={({ field }) => (<FormItem><FormLabel>Quantity</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={form.control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger></FormControl><SelectContent><SelectItem value="grams">Grams</SelectItem><SelectItem value="ounces">Ounces</SelectItem><SelectItem value="BTC">BTC</SelectItem><SelectItem value="ETH">ETH</SelectItem><SelectItem value="property">Property</SelectItem><SelectItem value="shares">Shares</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
         </div>
-        <FormField control={form.control} name="price_per_unit" render={({ field }) => (<FormItem><FormLabel>Price per Unit</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+        <FormField
+          control={form.control}
+          name="price_per_unit"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Price per Unit</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={pricesLoading ? "Loading prices..." : "0.00"}
+                  {...field}
+                  disabled={isPriceAuto}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button><Button type="submit" disabled={addAssetMutation.isPending}>{addAssetMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Add Asset</Button></div>
       </form>
     </Form>
