@@ -1,16 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { useFilteredData } from "@/hooks/useFilteredData";
+import { useExpenses, useAddExpense, useUpdateExpense, useDeleteExpense, Expense } from "@/hooks/useExpenses";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { toast } from "sonner";
+
 import { FinancialCard } from "@/components/ui/financial-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
+import { Skeleton } from "@/components/ui/skeleton";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -27,11 +37,18 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
+import {
   Table,
   TableBody,
   TableCell,
@@ -39,187 +56,66 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { 
-  ShoppingCart, 
-  Home, 
-  Car, 
-  Calendar,
-  Edit,
-  Trash2,
-  Plus
-} from "lucide-react";
-import { useCurrency } from "@/contexts/CurrencyContext";
-import { useFilteredData, useMonthlyStats } from "@/hooks/useFilteredData";
-import { supabase } from "@/lib/supabaseClient";
+import { ShoppingCart, Home, Car, Calendar as CalendarIcon, Edit, Trash2, Plus, Loader2 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
-interface Expense {
-  id: string;
-  title: string;
-  category: string;
-  amount: number;
-  currency: string;
-  date: string;
-  status: string;
-  type: string;
-}
+const expenseSchema = z.object({
+  title: z.string().min(2, { message: "Title must be at least 2 characters." }),
+  amount: z.coerce.number().positive({ message: "Amount must be a positive number." }),
+  currency: z.string().default("USD"),
+  category: z.string().min(1, { message: "Please select a category." }),
+  type: z.enum(['fixed', 'variable']),
+  status: z.enum(['paid', 'pending']),
+  date: z.date({ required_error: "A date is required." }),
+});
 
-export default function Expenses() {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+type ExpenseFormValues = z.infer<typeof expenseSchema>;
+
+export default function ExpensesPage() {
+  const { data: expensesData, isLoading, isError } = useExpenses();
+  const expenses = expensesData || [];
   const [activeTab, setActiveTab] = useState("fixed");
-  const [isAddingExpense, setIsAddingExpense] = useState(false);
-  const [isEditingExpense, setIsEditingExpense] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
-  const { formatCurrency, currency } = useCurrency();
-  const [newExpense, setNewExpense] = useState({
-    title: '',
-    amount: '',
-    currency: 'USD',
-    category: '',
-    type: '',
-    date: '',
-    status: 'pending'
-  });
+  const { formatCurrency } = useCurrency();
 
-  const handleAddExpense = async () => {
-    const payload = {
-      ...newExpense,
-      amount: parseFloat(String(newExpense.amount)),
-    };
-    const { data, error } = await supabase
-      .from('expenses')
-      .insert([payload])
-      .select();
-    if (error) {
-      console.error('Error adding expense:', error);
-    } else if (data) {
-      setExpenses([...expenses, data[0]]);
-      setIsAddingExpense(false);
-      setNewExpense({
-        title: '',
-        amount: '',
-        currency: 'USD',
-        category: '',
-        type: '',
-        date: '',
-        status: 'pending'
-      });
-    }
-  };
-
-  useEffect(() => {
-    const fetchExpenses = async () => {
-      const { data, error } = await supabase.from('expenses').select('*');
-      if (error) {
-        console.error('Error fetching expenses:', error);
-      } else if (data) {
-        setExpenses(data);
-      }
-    };
-
-    fetchExpenses();
-  }, []);
-
-  // Filter expenses by selected month
   const filteredExpensesByMonth = useFilteredData(expenses);
-  
-  const fixedExpenses = filteredExpensesByMonth.filter(expense => expense.type === "fixed");
-  const variableExpenses = filteredExpensesByMonth.filter(expense => expense.type === "variable");
-  
+
+  const fixedExpenses = filteredExpensesByMonth.filter((expense) => expense.type === "fixed");
+  const variableExpenses = filteredExpensesByMonth.filter((expense) => expense.type === "variable");
+
   const totalFixed = fixedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const totalVariable = variableExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const totalPaid = filteredExpensesByMonth.filter(expense => expense.status === "paid").reduce((sum, expense) => sum + expense.amount, 0);
-  const totalPending = filteredExpensesByMonth.filter(expense => expense.status === "pending").reduce((sum, expense) => sum + expense.amount, 0);
+  const totalPaid = filteredExpensesByMonth.filter((e) => e.status === "paid").reduce((sum, e) => sum + e.amount, 0);
+  const totalPending = filteredExpensesByMonth.filter((e) => e.status === "pending").reduce((sum, e) => sum + e.amount, 0);
 
   const filteredExpenses = activeTab === "fixed" ? fixedExpenses : variableExpenses;
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short', 
-      day: 'numeric'
-    });
-  };
+  if (isLoading) {
+    return <ExpensePageSkeleton />;
+  }
 
-  const getStatusBadgeColor = (status: string) => {
-    return status === "paid" ? "bg-green-100 text-green-600" : "bg-yellow-100 text-yellow-600";
-  };
-
-  const [editFormData, setEditFormData] = useState({
-    title: '',
-    category: '',
-    amount: 0,
-    date: '',
-    status: '',
-    currency: '',
-  });
-
-  const handleEditClick = (expense: Expense) => {
-    setEditingExpense(expense);
-    setEditFormData({
-      title: expense.title,
-      category: expense.category,
-      amount: expense.amount,
-      date: expense.date,
-      status: expense.status,
-      currency: expense.currency,
-    });
-    setIsEditingExpense(true);
-  };
-
-  const handleDeleteClick = (expense: Expense) => {
-    setDeletingExpense(expense);
-  };
-
-  const handleDelete = async () => {
-    if (!deletingExpense) return;
-    await supabase.from('expenses').delete().match({ id: deletingExpense.id });
-    setExpenses(expenses.filter(expense => expense.id !== deletingExpense.id));
-    setDeletingExpense(null);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setEditFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editingExpense) return;
-
-    const payload = {
-      ...editFormData,
-      amount: parseFloat(String(editFormData.amount)),
-    };
-
-    const { data, error } = await supabase
-      .from('expenses')
-      .update(payload)
-      .match({ id: editingExpense.id })
-      .select();
-
-    if (error) {
-      console.error('Error updating expense:', error);
-      return;
-    }
-
-    setExpenses(expenses.map(expense => (expense.id === editingExpense.id ? data[0] : expense)));
-    setIsEditingExpense(false);
-    setEditingExpense(null);
-  };
+  if (isError) {
+    return <div className="p-6 text-red-500">Error loading expenses.</div>;
+  }
 
   return (
     <div className="p-6 space-y-6 bg-gradient-dashboard min-h-screen">
-      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-foreground">Expense Management</h1>
-          <p className="text-muted-foreground">
-            Track and manage your fixed and variable expenses
-          </p>
+          <p className="text-muted-foreground">Track and manage your fixed and variable expenses</p>
         </div>
-        
-        <Dialog open={isAddingExpense} onOpenChange={setIsAddingExpense}>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-primary hover:opacity-90 transition-opacity">
               <Plus className="h-4 w-4 mr-2" />
@@ -229,341 +125,271 @@ export default function Expenses() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Expense</DialogTitle>
-              <DialogDescription>
-                Record a new expense to track your spending
-              </DialogDescription>
+              <DialogDescription>Record a new expense to track your spending.</DialogDescription>
             </DialogHeader>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleAddExpense();
-              }}
-            >
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Title</Label>
-                  <Input id="title" placeholder="e.g., Office Rent" value={newExpense.title} onChange={(e) => setNewExpense({ ...newExpense, title: e.target.value })} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="amount">Amount</Label>
-                    <Input id="amount" type="number" placeholder="0.00" value={newExpense.amount} onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="currency">Currency</Label>
-                    <Select value={newExpense.currency} onValueChange={(value) => setNewExpense({ ...newExpense, currency: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="USD" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="USD">USD ($)</SelectItem>
-                        <SelectItem value="TRY">TRY (₺)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <Select value={newExpense.category} onValueChange={(value) => setNewExpense({ ...newExpense, category: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="housing">Housing</SelectItem>
-                      <SelectItem value="utilities">Utilities</SelectItem>
-                      <SelectItem value="transportation">Transportation</SelectItem>
-                      <SelectItem value="groceries">Groceries</SelectItem>
-                      <SelectItem value="healthcare">Healthcare</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="type">Type</Label>
-                  <Select value={newExpense.type} onValueChange={(value) => setNewExpense({ ...newExpense, type: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fixed">Fixed</SelectItem>
-                      <SelectItem value="variable">Variable</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="date">Date</Label>
-                  <Input id="date" type="date" value={newExpense.date} onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })} />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button type="button" variant="outline" onClick={() => setIsAddingExpense(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="bg-gradient-primary">
-                    Add Expense
-                  </Button>
-                </div>
-              </div>
-            </form>
+            <AddExpenseForm setDialogOpen={setIsAddDialogOpen} />
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <FinancialCard
-          variant="expense"
-          title="Fixed Expenses"
-          value={formatCurrency(totalFixed)}
-          subtitle="Monthly recurring"
-          icon={<Home className="h-5 w-5" />}
-        />
-        
-        <FinancialCard
-          variant="debt"
-          title="Variable Expenses"
-          value={formatCurrency(totalVariable)}
-          subtitle="Fluctuating costs"
-          icon={<ShoppingCart className="h-5 w-5" />}
-        />
-        
-        <FinancialCard
-          variant="income"
-          title="Total Paid"
-          value={formatCurrency(totalPaid)}
-          subtitle="Completed payments"
-          icon={<Calendar className="h-5 w-5" />}
-        />
-        
-        <FinancialCard
-          variant="asset"
-          title="Total Pending"
-          value={formatCurrency(totalPending)}
-          subtitle="Awaiting payment"
-          icon={<Car className="h-5 w-5" />}
-        />
+        <FinancialCard variant="expense" title="Fixed Expenses" value={formatCurrency(totalFixed)} subtitle="Monthly recurring" icon={<Home className="h-5 w-5" />} />
+        <FinancialCard variant="debt" title="Variable Expenses" value={formatCurrency(totalVariable)} subtitle="Fluctuating costs" icon={<ShoppingCart className="h-5 w-5" />} />
+        <FinancialCard variant="income" title="Total Paid" value={formatCurrency(totalPaid)} subtitle="Completed payments" icon={<CalendarIcon className="h-5 w-5" />} />
+        <FinancialCard variant="asset" title="Total Pending" value={formatCurrency(totalPending)} subtitle="Awaiting payment" icon={<Car className="h-5 w-5" />} />
       </div>
 
-      {/* Expense Overview */}
       <div className="bg-gradient-card rounded-xl border border-border shadow-card">
         <div className="p-6 border-b border-border">
           <h2 className="text-xl font-semibold">Expense Overview</h2>
           <p className="text-muted-foreground">View and manage all your expenses</p>
         </div>
-
         <div className="p-6">
-          {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-fit grid-cols-2 bg-[#E9F4F4] dark:bg-muted">
-              <TabsTrigger 
-                value="fixed" 
-                className="data-[state=active]:bg-white data-[state=active]:text-[#0C1439] data-[state=active]:font-semibold data-[state=active]:shadow"
-              >
-                Fixed Expenses
-              </TabsTrigger>
-              <TabsTrigger 
-                value="variable"
-                className="data-[state=active]:bg-white data-[state=active]:text-[#0C1439] data-[state=active]:font-semibold data-[state=active]:shadow"
-              >
-                Variable Expenses
-              </TabsTrigger>
+              <TabsTrigger value="fixed" className="data-[state=active]:bg-white data-[state=active]:text-[#0C1439] data-[state=active]:font-semibold data-[state=active]:shadow">Fixed Expenses</TabsTrigger>
+              <TabsTrigger value="variable" className="data-[state=active]:bg-white data-[state=active]:text-[#0C1439] data-[state=active]:font-semibold data-[state=active]:shadow">Variable Expenses</TabsTrigger>
             </TabsList>
-
-            <TabsContent value="fixed" className="mt-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Title</TableHead>
-                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Category</TableHead>
-                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Date</TableHead>
-                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Status</TableHead>
-                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide text-right">Amount</TableHead>
-                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredExpenses.map((expense) => (
-                    <TableRow key={expense.id} className="hover:bg-muted/50">
-                      <TableCell className="text-base font-medium text-[#0C1439] dark:text-foreground">
-                        {expense.title}
-                      </TableCell>
-                      <TableCell className="text-base text-[#0C1439] dark:text-foreground">
-                        {expense.category}
-                      </TableCell>
-                      <TableCell className="text-base text-[#0C1439] dark:text-foreground">
-                        {formatDate(expense.date)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`${getStatusBadgeColor(expense.status)} text-sm rounded-full px-3 py-1`}>
-                          {expense.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-base font-medium text-[#0C1439] dark:text-foreground">
-                        {formatCurrency(expense.amount)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => handleEditClick(expense)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => handleDeleteClick(expense)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete the expense.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setDeletingExpense(null)}>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-
-            <TabsContent value="variable" className="mt-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Title</TableHead>
-                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Category</TableHead>
-                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Date</TableHead>
-                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Status</TableHead>
-                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide text-right">Amount</TableHead>
-                    <TableHead className="text-sm text-muted-foreground uppercase tracking-wide">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredExpenses.map((expense) => (
-                    <TableRow key={expense.id} className="hover:bg-muted/50">
-                      <TableCell className="text-base font-medium text-[#0C1439] dark:text-foreground">
-                        {expense.title}
-                      </TableCell>
-                      <TableCell className="text-base text-[#0C1439] dark:text-foreground">
-                        {expense.category}
-                      </TableCell>
-                      <TableCell className="text-base text-[#0C1439] dark:text-foreground">
-                        {formatDate(expense.date)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`${getStatusBadgeColor(expense.status)} text-sm rounded-full px-3 py-1`}>
-                          {expense.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-base font-medium text-[#0C1439] dark:text-foreground">
-                        {formatCurrency(expense.amount)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => handleEditClick(expense)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-800" onClick={() => handleDeleteClick(expense)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete the expense.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setDeletingExpense(null)}>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <TabsContent value={activeTab} className="mt-6">
+              <ExpenseTable
+                expenses={filteredExpenses}
+                onEdit={(expense) => {
+                  setEditingExpense(expense);
+                  setIsEditDialogOpen(true);
+                }}
+                onDelete={(expense) => setDeletingExpense(expense)}
+              />
             </TabsContent>
           </Tabs>
         </div>
       </div>
+
       {editingExpense && (
-        <Dialog open={isEditingExpense} onOpenChange={setIsEditingExpense}>
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Expense</DialogTitle>
-              <DialogDescription>
-                Update the details of your expense.
-              </DialogDescription>
+              <DialogDescription>Update the details of your expense.</DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleEdit}>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Title</Label>
-                  <Input name="title" value={editFormData.title} onChange={handleInputChange} />
-                </div>
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <Input name="category" value={editFormData.category} onChange={handleInputChange} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="amount">Amount</Label>
-                    <Input name="amount" type="number" step="0.01" value={editFormData.amount} onChange={handleInputChange} />
-                  </div>
-                  <div>
-                    <Label htmlFor="currency">Currency</Label>
-                    <Select name="currency" value={editFormData.currency} onValueChange={(value) => handleInputChange({ target: { name: 'currency', value } } as React.ChangeEvent<HTMLSelectElement>)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select currency" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="USD">USD</SelectItem>
-                        <SelectItem value="TRY">TRY</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="date">Date</Label>
-                  <Input name="date" type="date" value={editFormData.date} onChange={handleInputChange} />
-                </div>
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select name="status" value={editFormData.status} onValueChange={(value) => handleInputChange({ target: { name: 'status', value } } as React.ChangeEvent<HTMLSelectElement>)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button type="button" variant="outline" onClick={() => setIsEditingExpense(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="bg-gradient-primary">
-                    Save Changes
-                  </Button>
-                </div>
-              </div>
-            </form>
+            <EditExpenseForm setDialogOpen={setIsEditDialogOpen} expense={editingExpense} />
           </DialogContent>
         </Dialog>
       )}
+
+      {deletingExpense && <DeleteExpenseDialog expense={deletingExpense} setDeletingExpense={setDeletingExpense} />}
+    </div>
+  );
+}
+
+function ExpenseTable({ expenses, onEdit, onDelete }: { expenses: Expense[], onEdit: (expense: Expense) => void, onDelete: (expense: Expense) => void }) {
+  const { formatCurrency } = useCurrency();
+  const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  const getStatusBadgeColor = (status: string) => status === "paid" ? "bg-green-100 text-green-600" : "bg-yellow-100 text-yellow-600";
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Title</TableHead>
+          <TableHead>Category</TableHead>
+          <TableHead>Date</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="text-right">Amount</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {expenses.map((expense) => (
+          <TableRow key={expense.id} className="hover:bg-muted/50">
+            <TableCell className="font-medium">{expense.title}</TableCell>
+            <TableCell>{expense.category}</TableCell>
+            <TableCell>{formatDate(expense.date)}</TableCell>
+            <TableCell><Badge className={`${getStatusBadgeColor(expense.status)} rounded-full px-3 py-1`}>{expense.status}</Badge></TableCell>
+            <TableCell className="text-right">{formatCurrency(expense.amount)}</TableCell>
+            <TableCell>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => onEdit(expense)}><Edit className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="sm" onClick={() => onDelete(expense)}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+export function AddExpenseForm({ setDialogOpen }: { setDialogOpen: (open: boolean) => void }) {
+  const { user } = useAuth();
+  const addExpenseMutation = useAddExpense();
+  const form = useForm<ExpenseFormValues>({
+    resolver: zodResolver(expenseSchema),
+    defaultValues: { title: "", amount: undefined, currency: "USD", category: "", type: "fixed", status: "pending" },
+  });
+
+  const onSubmit = (values: ExpenseFormValues) => {
+    if (!user) return;
+    addExpenseMutation.mutate(
+      { ...values, user_id: user.id, date: format(values.date, "yyyy-MM-dd") },
+      {
+        onSuccess: () => {
+          toast.success("Expense added successfully!");
+          setDialogOpen(false);
+        },
+        onError: (error) => toast.error(`Error: ${error.message}`),
+      }
+    );
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField control={form.control} name="title" render={({ field }) => (
+          <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="e.g., Office Rent" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <div className="grid grid-cols-2 gap-4">
+            <FormField control={form.control} name="amount" render={({ field }) => (
+                <FormItem><FormLabel>Amount</FormLabel><FormControl><Input type="number" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="currency" render={({ field }) => (
+                <FormItem><FormLabel>Currency</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="TRY">TRY (₺)</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+            )} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+            <FormField control={form.control} name="category" render={({ field }) => (
+                <FormItem><FormLabel>Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="housing">Housing</SelectItem><SelectItem value="utilities">Utilities</SelectItem><SelectItem value="transportation">Transportation</SelectItem><SelectItem value="groceries">Groceries</SelectItem><SelectItem value="healthcare">Healthcare</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="type" render={({ field }) => (
+                <FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="fixed">Fixed</SelectItem><SelectItem value="variable">Variable</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+            )} />
+        </div>
+        <FormField control={form.control} name="date" render={({ field }) => (
+            <FormItem><FormLabel>Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="status" render={({ field }) => (
+            <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="pending">Pending</SelectItem><SelectItem value="paid">Paid</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+        )} />
+        <div className="flex gap-2 justify-end">
+          <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button type="submit" className="bg-gradient-primary" disabled={addExpenseMutation.isPending}>
+            {addExpenseMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Add Expense
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+function EditExpenseForm({ setDialogOpen, expense }: { setDialogOpen: (open: boolean) => void, expense: Expense }) {
+  const updateExpenseMutation = useUpdateExpense();
+  const form = useForm<ExpenseFormValues>({
+    resolver: zodResolver(expenseSchema),
+    defaultValues: { ...expense, date: new Date(expense.date) },
+  });
+
+  const onSubmit = (values: ExpenseFormValues) => {
+    updateExpenseMutation.mutate(
+      { ...values, id: expense.id, date: format(values.date, "yyyy-MM-dd") },
+      {
+        onSuccess: () => {
+          toast.success("Expense updated successfully!");
+          setDialogOpen(false);
+        },
+        onError: (error) => toast.error(`Error: ${error.message}`),
+      }
+    );
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Fields similar to AddExpenseForm */}
+        <FormField control={form.control} name="title" render={({ field }) => (
+          <FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <div className="grid grid-cols-2 gap-4">
+            <FormField control={form.control} name="amount" render={({ field }) => (
+                <FormItem><FormLabel>Amount</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="currency" render={({ field }) => (
+                <FormItem><FormLabel>Currency</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="TRY">TRY (₺)</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+            )} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+            <FormField control={form.control} name="category" render={({ field }) => (
+                <FormItem><FormLabel>Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="housing">Housing</SelectItem><SelectItem value="utilities">Utilities</SelectItem><SelectItem value="transportation">Transportation</SelectItem><SelectItem value="groceries">Groceries</SelectItem><SelectItem value="healthcare">Healthcare</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="type" render={({ field }) => (
+                <FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="fixed">Fixed</SelectItem><SelectItem value="variable">Variable</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+            )} />
+        </div>
+        <FormField control={form.control} name="date" render={({ field }) => (
+            <FormItem><FormLabel>Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="status" render={({ field }) => (
+            <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="pending">Pending</SelectItem><SelectItem value="paid">Paid</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+        )} />
+        <div className="flex gap-2 justify-end">
+          <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button type="submit" className="bg-gradient-primary" disabled={updateExpenseMutation.isPending}>
+            {updateExpenseMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+function DeleteExpenseDialog({ expense, setDeletingExpense }: { expense: Expense, setDeletingExpense: (expense: Expense | null) => void }) {
+    const deleteExpenseMutation = useDeleteExpense();
+    const handleDelete = () => {
+        deleteExpenseMutation.mutate(expense.id, {
+            onSuccess: () => {
+                toast.success("Expense deleted successfully!");
+                setDeletingExpense(null);
+            },
+            onError: (error) => toast.error(`Error: ${error.message}`),
+        });
+    };
+
+    return (
+        <AlertDialog open={!!expense} onOpenChange={() => setDeletingExpense(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>This action cannot be undone. This will permanently delete the expense.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={deleteExpenseMutation.isPending}>
+                        {deleteExpenseMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
+function ExpensePageSkeleton() {
+  return (
+    <div className="p-6 space-y-6 bg-gradient-dashboard min-h-screen">
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-72" />
+          <Skeleton className="h-5 w-96" />
+        </div>
+        <Skeleton className="h-10 w-36" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Skeleton className="h-28" />
+        <Skeleton className="h-28" />
+        <Skeleton className="h-28" />
+        <Skeleton className="h-28" />
+      </div>
+      <Skeleton className="h-96" />
     </div>
   );
 }
