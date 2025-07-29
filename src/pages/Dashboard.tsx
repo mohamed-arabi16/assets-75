@@ -54,7 +54,7 @@ export default function Dashboard() {
   const totalIncome = incomes.reduce((acc, i) => acc + i.amount, 0);
   const totalExpenses = expenses.reduce((acc, e) => acc + e.amount, 0);
   const totalDebt = debts.reduce((acc, d) => acc + d.amount, 0);
-  const totalAssets = assets.reduce((acc, a) => acc.quantity * a.price_per_unit, 0);
+  const totalAssets = assets.reduce((acc, a) => acc + (a.quantity * a.price_per_unit), 0);
 
   const data = {
     balance: totalIncome - totalExpenses,

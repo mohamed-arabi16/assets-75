@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAsset, useUpdateAsset, Asset } from "@/hooks/useAssets";
-import { useCommodityPrices } from "@/hooks/useCommodityPrices";
+import { useAssetPrices } from "@/hooks/useAssetPrices";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -43,7 +43,7 @@ type AssetFormValues = z.infer<typeof assetSchema>;
 const EditAssetForm = ({ asset }: { asset: Asset }) => {
   const navigate = useNavigate();
   const updateAssetMutation = useUpdateAsset();
-  const { prices: commodityPrices, loading: pricesLoading } = useCommodityPrices();
+  const { prices: assetPrices, loading: pricesLoading } = useAssetPrices();
 
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
@@ -54,18 +54,19 @@ const EditAssetForm = ({ asset }: { asset: Asset }) => {
   });
 
   const assetType = form.watch("type");
+  const autoUpdateEnabled = form.watch("auto_update");
 
   useEffect(() => {
-    if (pricesLoading || !assetType) return;
+    if (pricesLoading || !assetType || !autoUpdateEnabled || !assetPrices) return;
 
-    const isCommodity = assetType === 'gold' || assetType === 'silver';
-    if (form.getValues('auto_update') && isCommodity) {
-      const price = assetType === 'gold' ? commodityPrices.gold : commodityPrices.silver;
+    const lowerCaseType = assetType.toLowerCase();
+    if (lowerCaseType in assetPrices) {
+      const price = assetPrices[lowerCaseType as keyof typeof assetPrices];
       if (price) {
         form.setValue('price_per_unit', price, { shouldValidate: true });
       }
     }
-  }, [assetType, commodityPrices, pricesLoading, form]);
+  }, [assetType, autoUpdateEnabled, assetPrices, pricesLoading, form]);
 
   const onSubmit = (values: AssetFormValues) => {
     updateAssetMutation.mutate(
@@ -80,15 +81,15 @@ const EditAssetForm = ({ asset }: { asset: Asset }) => {
     );
   };
 
-  const isPriceAuto = form.watch('auto_update') && (assetType === 'gold' || assetType === 'silver');
+  const isPriceAuto = autoUpdateEnabled && !pricesLoading && assetType && (assetType in assetPrices);
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField control={form.control} name="type" render={({ field }) => (<FormItem><FormLabel>Asset Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="silver">Silver</SelectItem><SelectItem value="gold">Gold</SelectItem><SelectItem value="bitcoin">Bitcoin</SelectItem><SelectItem value="ethereum">Ethereum</SelectItem><SelectItem value="real_estate">Real Estate</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+        <FormField control={form.control} name="type" render={({ field }) => (<FormItem><FormLabel>Asset Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="gold">Gold</SelectItem><SelectItem value="silver">Silver</SelectItem><SelectItem value="bitcoin">Bitcoin</SelectItem><SelectItem value="ethereum">Ethereum</SelectItem><SelectItem value="cardano">Cardano</SelectItem><SelectItem value="real_estate">Real Estate</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="quantity" render={({ field }) => (<FormItem><FormLabel>Quantity</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>)} />
-          <FormField control={form.control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="grams">Grams</SelectItem><SelectItem value="ounces">Ounces</SelectItem><SelectItem value="BTC">BTC</SelectItem><SelectItem value="ETH">ETH</SelectItem><SelectItem value="property">Property</SelectItem><SelectItem value="shares">Shares</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+          <FormField control={form.control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="ounces">Ounces</SelectItem><SelectItem value="grams">Grams</SelectItem><SelectItem value="BTC">BTC</SelectItem><SelectItem value="ETH">ETH</SelectItem><SelectItem value="ADA">ADA</SelectItem><SelectItem value="property">Property</SelectItem><SelectItem value="shares">Shares</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
         </div>
         <div className="grid grid-cols-2 gap-4">
             <FormField
