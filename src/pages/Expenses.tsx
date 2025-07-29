@@ -63,6 +63,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -86,17 +87,17 @@ export default function ExpensesPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, convertCurrency, currency } = useCurrency();
 
   const filteredExpensesByMonth = useFilteredData(expenses);
 
   const fixedExpenses = filteredExpensesByMonth.filter((expense) => expense.type === "fixed");
   const variableExpenses = filteredExpensesByMonth.filter((expense) => expense.type === "variable");
 
-  const totalFixed = fixedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const totalVariable = variableExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const totalPaid = filteredExpensesByMonth.filter((e) => e.status === "paid").reduce((sum, e) => sum + e.amount, 0);
-  const totalPending = filteredExpensesByMonth.filter((e) => e.status === "pending").reduce((sum, e) => sum + e.amount, 0);
+  const totalFixed = fixedExpenses.reduce((sum, expense) => sum + convertCurrency(expense.amount, expense.currency), 0);
+  const totalVariable = variableExpenses.reduce((sum, expense) => sum + convertCurrency(expense.amount, expense.currency), 0);
+  const totalPaid = filteredExpensesByMonth.filter((e) => e.status === "paid").reduce((sum, e) => sum + convertCurrency(e.amount, e.currency), 0);
+  const totalPending = filteredExpensesByMonth.filter((e) => e.status === "pending").reduce((sum, e) => sum + convertCurrency(e.amount, e.currency), 0);
 
   const filteredExpenses = activeTab === "fixed" ? fixedExpenses : variableExpenses;
 
@@ -133,10 +134,10 @@ export default function ExpensesPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <FinancialCard variant="expense" title="Fixed Expenses" value={formatCurrency(totalFixed)} subtitle="Monthly recurring" icon={<Home className="h-5 w-5" />} />
-        <FinancialCard variant="debt" title="Variable Expenses" value={formatCurrency(totalVariable)} subtitle="Fluctuating costs" icon={<ShoppingCart className="h-5 w-5" />} />
-        <FinancialCard variant="income" title="Total Paid" value={formatCurrency(totalPaid)} subtitle="Completed payments" icon={<CalendarIcon className="h-5 w-5" />} />
-        <FinancialCard variant="asset" title="Total Pending" value={formatCurrency(totalPending)} subtitle="Awaiting payment" icon={<Car className="h-5 w-5" />} />
+        <FinancialCard variant="expense" title="Fixed Expenses" value={formatCurrency(totalFixed, currency)} subtitle="Monthly recurring" icon={<Home className="h-5 w-5" />} />
+        <FinancialCard variant="debt" title="Variable Expenses" value={formatCurrency(totalVariable, currency)} subtitle="Fluctuating costs" icon={<ShoppingCart className="h-5 w-5" />} />
+        <FinancialCard variant="income" title="Total Paid" value={formatCurrency(totalPaid, currency)} subtitle="Completed payments" icon={<CalendarIcon className="h-5 w-5" />} />
+        <FinancialCard variant="asset" title="Total Pending" value={formatCurrency(totalPending, currency)} subtitle="Awaiting payment" icon={<Car className="h-5 w-5" />} />
       </div>
 
       <div className="bg-gradient-card rounded-xl border border-border shadow-card">
@@ -205,7 +206,16 @@ function ExpenseTable({ expenses, onEdit, onDelete }: { expenses: Expense[], onE
             <TableCell>{expense.category}</TableCell>
             <TableCell>{formatDate(expense.date)}</TableCell>
             <TableCell><Badge className={`${getStatusBadgeColor(expense.status)} rounded-full px-3 py-1`}>{expense.status}</Badge></TableCell>
-            <TableCell className="text-right">{formatCurrency(expense.amount)}</TableCell>
+            <TableCell className="text-right">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>{formatCurrency(expense.amount, expense.currency)}</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Original: {new Intl.NumberFormat(undefined, { style: 'currency', currency: expense.currency }).format(expense.amount)}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TableCell>
             <TableCell>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={() => onEdit(expense)}><Edit className="h-4 w-4" /></Button>

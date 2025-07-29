@@ -57,6 +57,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DebtHistoryModal } from "@/components/DebtHistoryModal";
 import {
   CreditCard,
   AlertTriangle,
@@ -88,6 +90,18 @@ const debtSchema = z.object({
 
 type DebtFormValues = z.infer<typeof debtSchema>;
 
+const editDebtSchema = (originalAmount: number) => debtSchema.refine(
+  (data) => {
+    if (data.amount !== originalAmount) {
+      return data.note && data.note.length > 0;
+    }
+    return true;
+  },
+  {
+    message: "A note is required when changing the debt amount.",
+    path: ["note"],
+  }
+);
 
 export default function DebtsPage() {
   const { data: debtsData, isLoading, isError } = useDebts();
@@ -97,17 +111,19 @@ export default function DebtsPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [deletingDebt, setDeletingDebt] = useState<Debt | null>(null);
-  const { formatCurrency } = useCurrency();
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [selectedDebtForHistory, setSelectedDebtForHistory] = useState<Debt | null>(null);
+  const { formatCurrency, convertCurrency, currency } = useCurrency();
 
   const filteredDebtsByMonth = useFilteredData(debts, 'due_date');
 
   const shortTermDebts = filteredDebtsByMonth.filter((debt) => debt.type === "short");
   const longTermDebts = filteredDebtsByMonth.filter((debt) => debt.type === "long");
 
-  const totalShortTerm = shortTermDebts.reduce((sum, debt) => sum + debt.amount, 0);
-  const totalLongTerm = longTermDebts.reduce((sum, debt) => sum + debt.amount, 0);
-  const totalPending = filteredDebtsByMonth.filter((d) => d.status === "pending").reduce((sum, d) => sum + d.amount, 0);
-  const totalPaid = filteredDebtsByMonth.filter((d) => d.status === "paid").reduce((sum, d) => sum + d.amount, 0);
+  const totalShortTerm = shortTermDebts.reduce((sum, debt) => sum + convertCurrency(debt.amount, debt.currency), 0);
+  const totalLongTerm = longTermDebts.reduce((sum, debt) => sum + convertCurrency(debt.amount, debt.currency), 0);
+  const totalPending = filteredDebtsByMonth.filter((d) => d.status === "pending").reduce((sum, d) => sum + convertCurrency(d.amount, d.currency), 0);
+  const totalPaid = filteredDebtsByMonth.filter((d) => d.status === "paid").reduce((sum, d) => sum + convertCurrency(d.amount, d.currency), 0);
 
   const filteredDebts = activeTab === "short" ? shortTermDebts : longTermDebts;
 
@@ -141,10 +157,10 @@ export default function DebtsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <FinancialCard variant="debt" title="Short-Term Debt" value={formatCurrency(totalShortTerm)} subtitle="Due within 1 year" icon={<CreditCard className="h-5 w-5" />} />
-        <FinancialCard variant="asset" title="Long-Term Debt" value={formatCurrency(totalLongTerm)} subtitle="Due in over a year" icon={<AlertTriangle className="h-5 w-5" />} />
-        <FinancialCard variant="expense" title="Total Pending" value={formatCurrency(totalPending)} subtitle="Awaiting payment" icon={<Clock className="h-5 w-5" />} />
-        <FinancialCard variant="income" title="Total Paid" value={formatCurrency(totalPaid)} subtitle="Completed payments" icon={<CheckCircle className="h-5 w-5" />} />
+        <FinancialCard variant="debt" title="Short-Term Debt" value={formatCurrency(totalShortTerm, currency)} subtitle="Due within 1 year" icon={<CreditCard className="h-5 w-5" />} />
+        <FinancialCard variant="asset" title="Long-Term Debt" value={formatCurrency(totalLongTerm, currency)} subtitle="Due in over a year" icon={<AlertTriangle className="h-5 w-5" />} />
+        <FinancialCard variant="expense" title="Total Pending" value={formatCurrency(totalPending, currency)} subtitle="Awaiting payment" icon={<Clock className="h-5 w-5" />} />
+        <FinancialCard variant="income" title="Total Paid" value={formatCurrency(totalPaid, currency)} subtitle="Completed payments" icon={<CheckCircle className="h-5 w-5" />} />
       </div>
 
       <div className="bg-gradient-card rounded-xl border border-border shadow-card">
@@ -166,6 +182,10 @@ export default function DebtsPage() {
                   setIsEditDialogOpen(true);
                 }}
                 onDelete={(debt) => setDeletingDebt(debt)}
+                onViewHistory={(debt) => {
+                  setSelectedDebtForHistory(debt);
+                  setIsHistoryModalOpen(true);
+                }}
               />
             </TabsContent>
           </Tabs>
@@ -185,11 +205,17 @@ export default function DebtsPage() {
       )}
 
       {deletingDebt && <DeleteDebtDialog debt={deletingDebt} setDeletingDebt={setDeletingDebt} />}
+
+      <DebtHistoryModal
+        debt={selectedDebtForHistory}
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+      />
     </div>
   );
 }
 
-function DebtTable({ debts, onEdit, onDelete }: { debts: Debt[], onEdit: (debt: Debt) => void, onDelete: (debt: Debt) => void }) {
+function DebtTable({ debts, onEdit, onDelete, onViewHistory }: { debts: Debt[], onEdit: (debt: Debt) => void, onDelete: (debt: Debt) => void, onViewHistory: (debt: Debt) => void }) {
   const { formatCurrency } = useCurrency();
   const formatDate = (dateString: string | null) => dateString ? new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : "N/A";
 
@@ -203,12 +229,20 @@ function DebtTable({ debts, onEdit, onDelete }: { debts: Debt[], onEdit: (debt: 
             <TableCell>{debt.creditor}</TableCell>
             <TableCell>{formatDate(debt.due_date)}</TableCell>
             <TableCell><Badge variant={debt.status === 'paid' ? 'default' : 'destructive'}>{debt.status}</Badge></TableCell>
-            <TableCell className="text-right">{formatCurrency(debt.amount)}</TableCell>
+            <TableCell className="text-right">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>{formatCurrency(debt.amount, debt.currency)}</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Original: {new Intl.NumberFormat(undefined, { style: 'currency', currency: debt.currency }).format(debt.amount)}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TableCell>
             <TableCell>
-              <Popover>
-                <PopoverTrigger asChild><Button variant="outline" size="sm">View</Button></PopoverTrigger>
-                <PopoverContent><div className="space-y-2"><h4 className="font-medium leading-none">Amount History</h4><ul className="space-y-1">{debt.debt_amount_history.map(h => <li key={h.id} className="text-sm">{formatCurrency(h.amount)} on {formatDate(h.logged_at)}</li>)}</ul></div></PopoverContent>
-              </Popover>
+              <Button variant="outline" size="sm" onClick={() => onViewHistory(debt)}>
+                View History
+              </Button>
             </TableCell>
             <TableCell><div className="flex gap-2"><Button variant="ghost" size="sm" onClick={() => onEdit(debt)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={() => onDelete(debt)}><Trash2 className="h-4 w-4" /></Button></div></TableCell>
           </TableRow>
@@ -258,8 +292,8 @@ export function AddDebtForm({ setDialogOpen }: { setDialogOpen: (open: boolean) 
 function EditDebtForm({ setDialogOpen, debt }: { setDialogOpen: (open: boolean) => void, debt: Debt }) {
   const updateDebtMutation = useUpdateDebt();
   const form = useForm<DebtFormValues>({
-    resolver: zodResolver(debtSchema),
-    defaultValues: { ...debt, due_date: new Date(debt.due_date!) },
+    resolver: zodResolver(editDebtSchema(debt.amount)),
+    defaultValues: { ...debt, due_date: new Date(debt.due_date!), note: '' },
   });
 
   const onSubmit = (values: DebtFormValues) => {
@@ -267,7 +301,13 @@ function EditDebtForm({ setDialogOpen, debt }: { setDialogOpen: (open: boolean) 
       { ...values, id: debt.id, due_date: format(values.due_date, "yyyy-MM-dd") },
       {
         onSuccess: () => { toast.success("Debt updated!"); setDialogOpen(false); },
-        onError: (err) => toast.error(`Error: ${err.message}`),
+        onError: (err) => {
+          // If the error is a Zod validation error, it will be handled by the form.
+          // Otherwise, show a toast.
+          if (!('fieldErrors' in err)) {
+            toast.error(`Error: ${err.message}`);
+          }
+        },
       }
     );
   };
@@ -283,7 +323,7 @@ function EditDebtForm({ setDialogOpen, debt }: { setDialogOpen: (open: boolean) 
         </div>
         <FormField control={form.control} name="due_date" render={({ field }) => (<FormItem><FormLabel>Due Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
         <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="pending">Pending</SelectItem><SelectItem value="paid">Paid</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-        <FormField control={form.control} name="note" render={({ field }) => (<FormItem><FormLabel>Update Note (Optional)</FormLabel><FormControl><Input placeholder="e.g., Made a large payment" {...field} /></FormControl><FormMessage /></FormItem>)} />
+        <FormField control={form.control} name="note" render={({ field }) => (<FormItem><FormLabel>Update Note (Required if amount changes)</FormLabel><FormControl><Input placeholder="e.g., Made a large payment" {...field} /></FormControl><FormMessage /></FormItem>)} />
         <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button><Button type="submit" disabled={updateDebtMutation.isPending}>{updateDebtMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes</Button></div>
       </form>
     </Form>

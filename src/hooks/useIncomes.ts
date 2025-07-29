@@ -1,14 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
+import { Currency } from '@/contexts/CurrencyContext';
 
 // Define the Income type, consistent with the database schema
-interface Income {
+export interface Income {
   id: string;
   user_id: string;
   title: string;
   amount: number;
-  currency: string;
+  currency: Currency;
   category: string;
   status: 'expected' | 'received';
   date: string;
