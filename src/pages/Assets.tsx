@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useCommodityPrices } from "@/hooks/useCommodityPrices";
@@ -82,8 +83,6 @@ export default function AssetsPage() {
   const { formatCurrency } = useCurrency();
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null);
 
   const updatedAssets = assets.map((asset) => {
@@ -126,17 +125,17 @@ export default function AssetsPage() {
       <div className="bg-gradient-card rounded-lg border border-border shadow-card">
         <div className="p-4 sm:p-6 border-b border-border"><h2 className="text-xl font-semibold">Asset Portfolio</h2><p className="text-muted-foreground">Your tracked assets and their current values</p></div>
         <div className="p-4 sm:p-6"><div className="grid gap-4">
-          {updatedAssets.map((asset) => (<AssetCard key={asset.id} asset={asset} onEdit={() => { setEditingAsset(asset); setIsEditDialogOpen(true); }} onDelete={() => setDeletingAsset(asset)} />))}
+          {updatedAssets.map((asset) => (<AssetCard key={asset.id} asset={asset} onDelete={() => setDeletingAsset(asset)} />))}
         </div></div>
       </div>
 
-      {editingAsset && <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogContent><DialogHeader><DialogTitle>Edit Asset</DialogTitle><DialogDescription>Update the details of your asset.</DialogDescription></DialogHeader><EditAssetForm setDialogOpen={setIsEditDialogOpen} asset={editingAsset} /></DialogContent></Dialog>}
       {deletingAsset && <DeleteAssetDialog asset={deletingAsset} setDeletingAsset={setDeletingAsset} />}
     </div>
   );
 }
 
-function AssetCard({ asset, onEdit, onDelete }: { asset: Asset; onEdit: () => void; onDelete: () => void; }) {
+function AssetCard({ asset, onDelete }: { asset: Asset; onDelete: () => void; }) {
+    const navigate = useNavigate();
     const { formatCurrency } = useCurrency();
     const formatAssetType = (type: string) => type.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase());
     const getAssetIcon = (type: string) => {
@@ -164,7 +163,7 @@ function AssetCard({ asset, onEdit, onDelete }: { asset: Asset; onEdit: () => vo
                         {asset.auto_update && <div className="flex items-center justify-end gap-1 text-xs text-green-600"><TrendingUp className="h-3 w-3" />Auto-updated</div>}
                     </div>
                     <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onEdit}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => navigate(`/assets/${asset.id}/edit`)}><Edit className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onDelete}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                 </div>
@@ -201,33 +200,6 @@ function AddAssetForm({ setDialogOpen }: { setDialogOpen: (open: boolean) => voi
   );
 }
 
-function EditAssetForm({ setDialogOpen, asset }: { setDialogOpen: (open: boolean) => void, asset: Asset }) {
-  const updateAssetMutation = useUpdateAsset();
-  const form = useForm<AssetFormValues>({ resolver: zodResolver(assetSchema), defaultValues: asset });
-
-  const onSubmit = (values: AssetFormValues) => {
-    updateAssetMutation.mutate({ ...values, id: asset.id }, {
-        onSuccess: () => { toast.success("Asset updated!"); setDialogOpen(false); },
-        onError: (err) => toast.error(`Error: ${err.message}`),
-    });
-  };
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField control={form.control} name="type" render={({ field }) => (<FormItem><FormLabel>Asset Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="silver">Silver</SelectItem><SelectItem value="gold">Gold</SelectItem><SelectItem value="bitcoin">Bitcoin</SelectItem><SelectItem value="ethereum">Ethereum</SelectItem><SelectItem value="real_estate">Real Estate</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-        <div className="grid grid-cols-2 gap-4">
-          <FormField control={form.control} name="quantity" render={({ field }) => (<FormItem><FormLabel>Quantity</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>)} />
-          <FormField control={form.control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="grams">Grams</SelectItem><SelectItem value="ounces">Ounces</SelectItem><SelectItem value="BTC">BTC</SelectItem><SelectItem value="ETH">ETH</SelectItem><SelectItem value="property">Property</SelectItem><SelectItem value="shares">Shares</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-        </div>
-        <FormField control={form.control} name="price_per_unit" render={({ field }) => (<FormItem><FormLabel>Price per Unit</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)} />
-        <FormField control={form.control} name="auto_update" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Auto Update Price</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
-        <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button><Button type="submit" disabled={updateAssetMutation.isPending}>{updateAssetMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes</Button></div>
-      </form>
-    </Form>
-  );
-}
-
 function DeleteAssetDialog({ asset, setDeletingAsset }: { asset: Asset, setDeletingAsset: (asset: Asset | null) => void }) {
     const deleteAssetMutation = useDeleteAsset();
     return (
@@ -236,7 +208,7 @@ function DeleteAssetDialog({ asset, setDeletingAsset }: { asset: Asset, setDelet
                 <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete this asset.</AlertDialogDescription></AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => deleteAssetMutation.mutate(asset.id, { onSuccess: () => { toast.success("Asset deleted!"); setDeletingAsset(null); }, onError: (err) => toast.error(`Error: ${err.message}`) })} disabled={deleteAssetMutation.isPending}>
+                    <AlertDialogAction onClick={() => deleteAssetMutation.mutate(asset, { onSuccess: () => { toast.success("Asset deleted!"); setDeletingAsset(null); }, onError: (err) => toast.error(`Error: ${err.message}`) })} disabled={deleteAssetMutation.isPending}>
                         {deleteAssetMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Delete
                     </AlertDialogAction>

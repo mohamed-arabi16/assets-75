@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DateFilterSelector } from "@/components/DateFilterSelector";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useFilteredData } from "@/hooks/useFilteredData";
@@ -133,21 +134,24 @@ export default function IncomePage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Income Tracking</h1>
           <p className="text-muted-foreground">Manage your freelance income and expected payments</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-primary shadow-financial w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Income
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Income</DialogTitle>
-              <DialogDescription>Record a new income entry to track your earnings.</DialogDescription>
-            </DialogHeader>
-            <AddIncomeForm setDialogOpen={setIsAddDialogOpen} />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-4">
+          <DateFilterSelector />
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-primary shadow-financial w-full sm:w-auto">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Income
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Income</DialogTitle>
+                <DialogDescription>Record a new income entry to track your earnings.</DialogDescription>
+              </DialogHeader>
+              <AddIncomeForm setDialogOpen={setIsAddDialogOpen} />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -415,7 +419,7 @@ function EditIncomeForm({ setDialogOpen, income }: { setDialogOpen: (open: boole
 function DeleteIncomeDialog({ income, setDeletingIncome }: { income: Income, setDeletingIncome: (income: Income | null) => void }) {
     const deleteIncomeMutation = useDeleteIncome();
     const handleDelete = () => {
-        deleteIncomeMutation.mutate(income.id, {
+        deleteIncomeMutation.mutate(income, {
             onSuccess: () => {
                 toast.success("Income deleted successfully!");
                 setDeletingIncome(null);

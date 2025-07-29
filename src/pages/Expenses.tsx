@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DateFilterSelector } from "@/components/DateFilterSelector";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useFilteredData } from "@/hooks/useFilteredData";
@@ -116,21 +117,24 @@ export default function ExpensesPage() {
           <h1 className="text-3xl font-bold text-foreground">Expense Management</h1>
           <p className="text-muted-foreground">Track and manage your fixed and variable expenses</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-primary hover:opacity-90 transition-opacity">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Expense
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Expense</DialogTitle>
-              <DialogDescription>Record a new expense to track your spending.</DialogDescription>
-            </DialogHeader>
-            <AddExpenseForm setDialogOpen={setIsAddDialogOpen} />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-4">
+          <DateFilterSelector />
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-primary hover:opacity-90 transition-opacity">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Expense
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Expense</DialogTitle>
+                <DialogDescription>Record a new expense to track your spending.</DialogDescription>
+              </DialogHeader>
+              <AddExpenseForm setDialogOpen={setIsAddDialogOpen} />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -355,7 +359,7 @@ function EditExpenseForm({ setDialogOpen, expense }: { setDialogOpen: (open: boo
 function DeleteExpenseDialog({ expense, setDeletingExpense }: { expense: Expense, setDeletingExpense: (expense: Expense | null) => void }) {
     const deleteExpenseMutation = useDeleteExpense();
     const handleDelete = () => {
-        deleteExpenseMutation.mutate(expense.id, {
+        deleteExpenseMutation.mutate(expense, {
             onSuccess: () => {
                 toast.success("Expense deleted successfully!");
                 setDeletingExpense(null);

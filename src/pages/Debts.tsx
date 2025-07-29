@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { DateFilterSelector } from "@/components/DateFilterSelector";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useFilteredData } from "@/hooks/useFilteredData";
@@ -145,18 +146,21 @@ export default function DebtsPage() {
           <h1 className="text-3xl font-bold text-foreground">Debt Management</h1>
           <p className="text-muted-foreground">Track and manage your short-term and long-term debts</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-primary">Add Debt</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Debt</DialogTitle>
-              <DialogDescription>Record a new debt to track your liabilities.</DialogDescription>
-            </DialogHeader>
-            <AddDebtForm setDialogOpen={setIsAddDialogOpen} />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-4">
+          <DateFilterSelector />
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-primary">Add Debt</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Debt</DialogTitle>
+                <DialogDescription>Record a new debt to track your liabilities.</DialogDescription>
+              </DialogHeader>
+              <AddDebtForm setDialogOpen={setIsAddDialogOpen} />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -483,7 +487,7 @@ function DeleteDebtDialog({ debt, setDeletingDebt }: { debt: Debt, setDeletingDe
                 <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the debt record.</AlertDialogDescription></AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => deleteDebtMutation.mutate(debt.id, { onSuccess: () => { toast.success("Debt deleted!"); setDeletingDebt(null); }, onError: (err) => toast.error(`Error: ${err.message}`) })} disabled={deleteDebtMutation.isPending}>
+                    <AlertDialogAction onClick={() => deleteDebtMutation.mutate(debt, { onSuccess: () => { toast.success("Debt deleted!"); setDeletingDebt(null); }, onError: (err) => toast.error(`Error: ${err.message}`) })} disabled={deleteDebtMutation.isPending}>
                         {deleteDebtMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Delete
                     </AlertDialogAction>

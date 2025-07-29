@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { Currency } from '@/contexts/CurrencyContext';
+import { useLogActivity } from './useLogActivity';
 
 // Type definitions
 export interface IncomeAmountHistory {
@@ -81,11 +82,17 @@ const addIncome = async (newIncome: Omit<Income, 'id' | 'created_at' | 'income_a
 export const useAddIncome = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const logActivity = useLogActivity();
 
   return useMutation({
     mutationFn: addIncome,
-    onSuccess: () => {
+    onSuccess: (newIncome) => {
       queryClient.invalidateQueries({ queryKey: ['incomes', user?.id] });
+      logActivity({
+        type: 'income',
+        action: 'create',
+        description: `Created income: ${newIncome.title}`,
+      });
     },
   });
 };
@@ -134,38 +141,52 @@ const updateIncome = async (payload: UpdateIncomePayload) => {
             .eq('id', payload.id);
         if (amountUpdateError) throw new Error(amountUpdateError.message);
     }
+    return payload;
 };
 
 export const useUpdateIncome = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const logActivity = useLogActivity();
 
   return useMutation({
     mutationFn: updateIncome,
-    onSuccess: () => {
+    onSuccess: (updatedIncome) => {
       queryClient.invalidateQueries({ queryKey: ['incomes', user?.id] });
+      logActivity({
+        type: 'income',
+        action: 'edit',
+        description: `Updated income: ${updatedIncome.title}`,
+      });
     },
   });
 };
 
 // 4. Hook to delete an income
-const deleteIncome = async (incomeId: string) => {
+const deleteIncome = async (income: Income) => {
   const { error } = await supabase
     .from('incomes')
     .delete()
-    .eq('id', incomeId);
+    .eq('id', income.id);
 
   if (error) throw new Error(error.message);
+  return income;
 };
 
 export const useDeleteIncome = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const logActivity = useLogActivity();
 
   return useMutation({
     mutationFn: deleteIncome,
-    onSuccess: () => {
+    onSuccess: (deletedIncome) => {
       queryClient.invalidateQueries({ queryKey: ['incomes', user?.id] });
+      logActivity({
+        type: 'income',
+        action: 'delete',
+        description: `Deleted income: ${deletedIncome.title}`,
+      });
     },
   });
 };
