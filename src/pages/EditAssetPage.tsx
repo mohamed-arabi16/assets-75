@@ -1,6 +1,7 @@
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAsset, useUpdateAsset, Asset } from "@/hooks/useAssets";
-import { useExchangeRate } from "@/hooks/useExchangeRate";
+import { useCommodityPrices } from "@/hooks/useCommodityPrices";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -42,27 +43,33 @@ type AssetFormValues = z.infer<typeof assetSchema>;
 const EditAssetForm = ({ asset }: { asset: Asset }) => {
   const navigate = useNavigate();
   const updateAssetMutation = useUpdateAsset();
-  const { currency: userCurrency } = useCurrency();
-  const { data: rates } = useExchangeRate('USD');
+  const { prices: commodityPrices, loading: pricesLoading } = useCommodityPrices();
 
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
     defaultValues: {
-        ...asset,
-        currency: asset.currency as 'USD' | 'TRY',
+      ...asset,
+      currency: asset.currency as 'USD' | 'TRY',
     },
   });
 
-  const onSubmit = (values: AssetFormValues) => {
-    let conversion_rate = null;
-    if (values.currency !== userCurrency && rates?.TRY) {
-        // Assuming user's primary currency is USD for this logic.
-        // If the asset is in TRY, we store the USD to TRY rate.
-        conversion_rate = rates.TRY;
-    }
+  const assetType = form.watch("type");
 
+  useEffect(() => {
+    if (pricesLoading || !assetType) return;
+
+    const isCommodity = assetType === 'gold' || assetType === 'silver';
+    if (form.getValues('auto_update') && isCommodity) {
+      const price = assetType === 'gold' ? commodityPrices.gold : commodityPrices.silver;
+      if (price) {
+        form.setValue('price_per_unit', price, { shouldValidate: true });
+      }
+    }
+  }, [assetType, commodityPrices, pricesLoading, form]);
+
+  const onSubmit = (values: AssetFormValues) => {
     updateAssetMutation.mutate(
-      { ...values, id: asset.id, conversion_rate },
+      { ...values, id: asset.id },
       {
         onSuccess: () => {
           toast.success("Asset updated successfully!");
@@ -73,6 +80,8 @@ const EditAssetForm = ({ asset }: { asset: Asset }) => {
     );
   };
 
+  const isPriceAuto = form.watch('auto_update') && (assetType === 'gold' || assetType === 'silver');
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -82,7 +91,25 @@ const EditAssetForm = ({ asset }: { asset: Asset }) => {
           <FormField control={form.control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="grams">Grams</SelectItem><SelectItem value="ounces">Ounces</SelectItem><SelectItem value="BTC">BTC</SelectItem><SelectItem value="ETH">ETH</SelectItem><SelectItem value="property">Property</SelectItem><SelectItem value="shares">Shares</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
         </div>
         <div className="grid grid-cols-2 gap-4">
-            <FormField control={form.control} name="price_per_unit" render={({ field }) => (<FormItem><FormLabel>Price per Unit</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField
+              control={form.control}
+              name="price_per_unit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Price per Unit</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      {...field}
+                      disabled={isPriceAuto}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField control={form.control} name="currency" render={({ field }) => (<FormItem><FormLabel>Currency</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="USD">USD</SelectItem><SelectItem value="TRY">TRY</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
         </div>
         <FormField control={form.control} name="auto_update" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Auto Update Price</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
