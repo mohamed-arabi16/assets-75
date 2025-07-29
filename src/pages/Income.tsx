@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCurrency, Currency } from "@/contexts/CurrencyContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { useFilteredData } from "@/hooks/useFilteredData";
-import { useIncomes, useAddIncome, useUpdateIncome, useDeleteIncome } from "@/hooks/useIncomes";
+import { useIncomes, useAddIncome, useUpdateIncome, useDeleteIncome, Income } from "@/hooks/useIncomes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import { FinancialCard } from "@/components/ui/financial-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -37,7 +36,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Form,
@@ -48,7 +46,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, Edit, Trash2, Filter, Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { Plus, TrendingUp, Edit, Trash2, Filter, Calendar as CalendarIcon, Loader2, History } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -56,6 +54,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { IncomeHistoryModal } from "@/components/IncomeHistoryModal";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -67,20 +66,24 @@ const incomeSchema = z.object({
   category: z.string().min(1, { message: "Please select a category." }),
   status: z.enum(['expected', 'received']),
   date: z.date({ required_error: "A date is required." }),
+  note: z.string().optional(),
 });
 
 type IncomeFormValues = z.infer<typeof incomeSchema>;
 
-interface Income {
-  id: string;
-  user_id: string;
-  title: string;
-  amount: number;
-  currency: Currency;
-  category: string;
-  status: 'expected' | 'received';
-  date: string;
-}
+const editIncomeSchema = (originalAmount: number) => incomeSchema.refine(
+  (data) => {
+    if (data.status === 'expected' && data.amount !== originalAmount) {
+      return data.note && data.note.length > 0;
+    }
+    return true;
+  },
+  {
+    message: "A note is required when changing the amount of an expected income.",
+    path: ["note"],
+  }
+);
+
 
 // Main Component
 export default function IncomePage() {
@@ -92,6 +95,8 @@ export default function IncomePage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
   const [deletingIncome, setDeletingIncome] = useState<Income | null>(null);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [selectedIncomeForHistory, setSelectedIncomeForHistory] = useState<Income | null>(null);
 
   const filteredIncomesByMonth = useFilteredData(incomes);
 
@@ -114,11 +119,9 @@ export default function IncomePage() {
     acc[category] = (acc[category] || 0) + convertedAmount;
     return acc;
   }, {} as Record<string, number>);
-
   if (isLoading) {
     return <IncomePageSkeleton />;
   }
-
   if (isError) {
     return <div className="p-4 text-red-500">Error loading income data.</div>;
   }
@@ -203,6 +206,10 @@ export default function IncomePage() {
             setIsEditDialogOpen(true);
           }}
           onDelete={(income) => setDeletingIncome(income)}
+          onViewHistory={(income) => {
+            setSelectedIncomeForHistory(income);
+            setIsHistoryModalOpen(true);
+          }}
         />
       </div>
 
@@ -219,12 +226,18 @@ export default function IncomePage() {
       )}
 
       {deletingIncome && <DeleteIncomeDialog income={deletingIncome} setDeletingIncome={setDeletingIncome} />}
+
+      <IncomeHistoryModal
+        income={selectedIncomeForHistory}
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+      />
     </div>
   );
 }
 
 // Sub-components
-function IncomeList({ incomes, onEdit, onDelete }: { incomes: Income[], onEdit: (income: Income) => void, onDelete: (income: Income) => void }) {
+function IncomeList({ incomes, onEdit, onDelete, onViewHistory }: { incomes: Income[], onEdit: (income: Income) => void, onDelete: (income: Income) => void, onViewHistory: (income: Income) => void }) {
   const { formatCurrency } = useCurrency();
   const getStatusColor = (status: string) => (status === "received" ? "bg-income" : "bg-orange-500");
   const getCategoryIcon = (_category: string) => <TrendingUp className="h-4 w-4" />;
@@ -260,6 +273,11 @@ function IncomeList({ incomes, onEdit, onDelete }: { incomes: Income[], onEdit: 
                 <Badge className={`${getStatusColor(income.status)} text-white text-xs`}>{income.status}</Badge>
               </div>
               <div className="flex gap-1 sm:gap-2">
+                 {income.status === 'expected' && (
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onViewHistory(income)}>
+                    <History className="h-3 w-3 sm:h-4 sm:w-4" />
+                  </Button>
+                )}
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onEdit(income)}><Edit className="h-3 w-3 sm:h-4 sm:w-4" /></Button>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onDelete(income)}><Trash2 className="h-3 w-3 sm:h-4 sm:w-4" /></Button>
               </div>
@@ -270,7 +288,6 @@ function IncomeList({ incomes, onEdit, onDelete }: { incomes: Income[], onEdit: 
     </div>
   );
 }
-
 export function AddIncomeForm({ setDialogOpen }: { setDialogOpen: (open: boolean) => void }) {
   const { user } = useAuth();
   const addIncomeMutation = useAddIncome();
@@ -333,10 +350,11 @@ export function AddIncomeForm({ setDialogOpen }: { setDialogOpen: (open: boolean
 function EditIncomeForm({ setDialogOpen, income }: { setDialogOpen: (open: boolean) => void, income: Income }) {
   const updateIncomeMutation = useUpdateIncome();
   const form = useForm<IncomeFormValues>({
-    resolver: zodResolver(incomeSchema),
+    resolver: zodResolver(editIncomeSchema(income.amount)),
     defaultValues: {
       ...income,
       date: new Date(income.date),
+      note: '',
     },
   });
 
@@ -378,6 +396,9 @@ function EditIncomeForm({ setDialogOpen, income }: { setDialogOpen: (open: boole
         )} />
         <FormField control={form.control} name="date" render={({ field }) => (
             <FormItem><FormLabel>Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="note" render={({ field }) => (
+            <FormItem><FormLabel>Update Note (Required if amount changes)</FormLabel><FormControl><Input placeholder="e.g., Partial payment received" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <div className="flex gap-2 justify-end">
           <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
