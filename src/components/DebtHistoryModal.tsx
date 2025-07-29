@@ -76,7 +76,9 @@ export function DebtHistoryModal({ debt, isOpen, onClose }: DebtHistoryModalProp
                         {entry.delta > 0 ? 'Increase' : 'Payment'}: {formatCurrency(Math.abs(entry.delta), debt.currency)}
                       </Badge>
                     ) : (
-                      'Initial Amount'
+                      <Badge variant="outline">
+                        Initial Amount: {formatCurrency(entry.amount, debt.currency)}
+                      </Badge>
                     )}
                   </TableCell>
                   <TableCell>{entry.note}</TableCell>

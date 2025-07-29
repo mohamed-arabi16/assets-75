@@ -69,6 +69,7 @@ import {
   Calendar as CalendarIcon,
   Plus,
   Loader2,
+  DollarSign,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -113,6 +114,8 @@ export default function DebtsPage() {
   const [deletingDebt, setDeletingDebt] = useState<Debt | null>(null);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedDebtForHistory, setSelectedDebtForHistory] = useState<Debt | null>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [payingDebt, setPayingDebt] = useState<Debt | null>(null);
   const { formatCurrency, convertCurrency, currency } = useCurrency();
 
   const filteredDebtsByMonth = useFilteredData(debts, 'due_date');
@@ -186,6 +189,10 @@ export default function DebtsPage() {
                   setSelectedDebtForHistory(debt);
                   setIsHistoryModalOpen(true);
                 }}
+                onMakePayment={(debt) => {
+                  setPayingDebt(debt);
+                  setIsPaymentDialogOpen(true);
+                }}
               />
             </TabsContent>
           </Tabs>
@@ -206,6 +213,20 @@ export default function DebtsPage() {
 
       {deletingDebt && <DeleteDebtDialog debt={deletingDebt} setDeletingDebt={setDeletingDebt} />}
 
+      {payingDebt && (
+        <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Make a Payment on {payingDebt.title}</DialogTitle>
+              <DialogDescription>
+                Current balance: {formatCurrency(payingDebt.amount, payingDebt.currency)}
+              </DialogDescription>
+            </DialogHeader>
+            <MakePaymentForm setDialogOpen={setIsPaymentDialogOpen} debt={payingDebt} />
+          </DialogContent>
+        </Dialog>
+      )}
+
       <DebtHistoryModal
         debt={selectedDebtForHistory}
         isOpen={isHistoryModalOpen}
@@ -215,13 +236,13 @@ export default function DebtsPage() {
   );
 }
 
-function DebtTable({ debts, onEdit, onDelete, onViewHistory }: { debts: Debt[], onEdit: (debt: Debt) => void, onDelete: (debt: Debt) => void, onViewHistory: (debt: Debt) => void }) {
+function DebtTable({ debts, onEdit, onDelete, onViewHistory, onMakePayment }: { debts: Debt[], onEdit: (debt: Debt) => void, onDelete: (debt: Debt) => void, onViewHistory: (debt: Debt) => void, onMakePayment: (debt: Debt) => void }) {
   const { formatCurrency } = useCurrency();
   const formatDate = (dateString: string | null) => dateString ? new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : "N/A";
 
   return (
     <Table>
-      <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Creditor</TableHead><TableHead>Due Date</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>History</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+      <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Creditor</TableHead><TableHead>Due Date</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
       <TableBody>
         {debts.map((debt) => (
           <TableRow key={debt.id}>
@@ -240,11 +261,37 @@ function DebtTable({ debts, onEdit, onDelete, onViewHistory }: { debts: Debt[], 
               </Tooltip>
             </TableCell>
             <TableCell>
-              <Button variant="outline" size="sm" onClick={() => onViewHistory(debt)}>
-                View History
-              </Button>
+              <div className="flex items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" onClick={() => onMakePayment(debt)} disabled={debt.status === 'paid'}>
+                      <DollarSign className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Make Payment</p></TooltipContent>
+                </Tooltip>
+                 <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" onClick={() => onViewHistory(debt)}>
+                      <Clock className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p>View History</p></TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onEdit(debt)}><Edit className="h-4 w-4" /></Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Edit</p></TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onDelete(debt)}><Trash2 className="h-4 w-4" /></Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Delete</p></TooltipContent>
+                </Tooltip>
+              </div>
             </TableCell>
-            <TableCell><div className="flex gap-2"><Button variant="ghost" size="sm" onClick={() => onEdit(debt)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={() => onDelete(debt)}><Trash2 className="h-4 w-4" /></Button></div></TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -325,6 +372,104 @@ function EditDebtForm({ setDialogOpen, debt }: { setDialogOpen: (open: boolean) 
         <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="pending">Pending</SelectItem><SelectItem value="paid">Paid</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
         <FormField control={form.control} name="note" render={({ field }) => (<FormItem><FormLabel>Update Note (Required if amount changes)</FormLabel><FormControl><Input placeholder="e.g., Made a large payment" {...field} /></FormControl><FormMessage /></FormItem>)} />
         <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button><Button type="submit" disabled={updateDebtMutation.isPending}>{updateDebtMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes</Button></div>
+      </form>
+    </Form>
+  );
+}
+
+const paymentSchema = z.object({
+  paymentAmount: z.coerce.number().positive({ message: "Payment amount must be positive." }),
+  note: z.string().optional(),
+});
+
+type PaymentFormValues = z.infer<typeof paymentSchema>;
+
+function MakePaymentForm({ setDialogOpen, debt }: { setDialogOpen: (open: boolean) => void, debt: Debt }) {
+  const updateDebtMutation = useUpdateDebt();
+  const { formatCurrency } = useCurrency();
+  const form = useForm<PaymentFormValues>({
+    resolver: zodResolver(paymentSchema),
+    defaultValues: {
+      paymentAmount: undefined,
+      note: "",
+    },
+  });
+
+  const onSubmit = (values: PaymentFormValues) => {
+    const newAmount = debt.amount - values.paymentAmount;
+    if (newAmount < 0) {
+      form.setError("paymentAmount", {
+        type: "manual",
+        message: "Payment cannot exceed the remaining debt amount.",
+      });
+      return;
+    }
+
+    const note = values.note || `Payment of ${formatCurrency(values.paymentAmount, debt.currency)}`;
+
+    updateDebtMutation.mutate(
+      {
+        id: debt.id,
+        // Pass all required fields for the mutation, even if not changed here
+        title: debt.title,
+        creditor: debt.creditor,
+        due_date: debt.due_date,
+        status: newAmount === 0 ? 'paid' : 'pending',
+        currency: debt.currency,
+        // The crucial part: update the amount
+        amount: newAmount,
+        note: note,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Payment recorded successfully!");
+          setDialogOpen(false);
+        },
+        onError: (err) => {
+          toast.error(`Error: ${err.message}`);
+        },
+      }
+    );
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="paymentAmount"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Payment Amount</FormLabel>
+              <FormControl>
+                <Input type="number" placeholder="0.00" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="note"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Note (Optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Monthly payment" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={updateDebtMutation.isPending}>
+            {updateDebtMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Record Payment
+          </Button>
+        </div>
       </form>
     </Form>
   );
