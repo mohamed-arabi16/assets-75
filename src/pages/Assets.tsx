@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { useCommodityPrices } from "@/hooks/useCommodityPrices";
+import { useAssetPrices } from "@/hooks/useAssetPrices";
 import { useAssets, useAddAsset, useUpdateAsset, useDeleteAsset, Asset } from "@/hooks/useAssets";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -79,19 +79,20 @@ type AssetFormValues = z.infer<typeof assetSchema>;
 export default function AssetsPage() {
   const { data: assetsData, isLoading, isError } = useAssets();
   const assets = assetsData || [];
-  const { prices: commodityPrices, loading: pricesLoading } = useCommodityPrices();
+  const { prices: assetPrices, loading: pricesLoading } = useAssetPrices();
   const { formatCurrency } = useCurrency();
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null);
 
   const updatedAssets = assets.map((asset) => {
-    if (asset.auto_update && !pricesLoading) {
-      if (asset.type === 'silver' && commodityPrices.silver) {
-        return { ...asset, price_per_unit: commodityPrices.silver };
-      }
-      if (asset.type === 'gold' && commodityPrices.gold) {
-        return { ...asset, price_per_unit: commodityPrices.gold };
+    if (asset.auto_update && !pricesLoading && assetPrices) {
+      const lowerCaseType = asset.type.toLowerCase();
+      if (lowerCaseType in assetPrices) {
+        const newPrice = assetPrices[lowerCaseType as keyof typeof assetPrices];
+        if (typeof newPrice === 'number') {
+          return { ...asset, price_per_unit: newPrice };
+        }
       }
     }
     return asset;
@@ -99,7 +100,7 @@ export default function AssetsPage() {
 
   const totalAssetValue = updatedAssets.reduce((sum, asset) => sum + asset.quantity * asset.price_per_unit, 0);
   const silverValue = updatedAssets.filter(a => a.type === "silver").reduce((sum, a) => sum + a.quantity * a.price_per_unit, 0);
-  const cryptoValue = updatedAssets.filter(a => a.type === "bitcoin").reduce((sum, a) => sum + a.quantity * a.price_per_unit, 0);
+  const cryptoValue = updatedAssets.filter(a => a.type === "bitcoin" || a.type === "ethereum" || a.type === "cardano").reduce((sum, a) => sum + a.quantity * a.price_per_unit, 0);
   const realEstateValue = updatedAssets.filter(a => a.type === "real_estate").reduce((sum, a) => sum + a.quantity * a.price_per_unit, 0);
 
   if (isLoading) return <AssetsPageSkeleton />;
@@ -141,7 +142,7 @@ function AssetCard({ asset, onDelete }: { asset: Asset; onDelete: () => void; })
     const getAssetIcon = (type: string) => {
         switch (type) {
             case "silver": case "gold": return <Gem className="h-5 w-5" />;
-            case "bitcoin": case "ethereum": return <Bitcoin className="h-5 w-5" />;
+            case "bitcoin": case "ethereum": case "cardano": return <Bitcoin className="h-5 w-5" />;
             case "real_estate": return <Home className="h-5 w-5" />;
             default: return <Gem className="h-5 w-5" />;
         }
@@ -175,28 +176,36 @@ function AssetCard({ asset, onDelete }: { asset: Asset; onDelete: () => void; })
 function AddAssetForm({ setDialogOpen }: { setDialogOpen: (open: boolean) => void }) {
   const { user } = useAuth();
   const addAssetMutation = useAddAsset();
-  const { prices: commodityPrices, loading: pricesLoading } = useCommodityPrices();
+  const { prices: assetPrices, loading: pricesLoading } = useAssetPrices();
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
     defaultValues: { type: "", quantity: undefined, unit: "", price_per_unit: undefined, currency: "USD", auto_update: false },
   });
 
   const assetType = form.watch("type");
+  const isPriceAuto = !pricesLoading && assetType && (assetType in assetPrices);
 
   useEffect(() => {
-    if (pricesLoading) return;
+    if (pricesLoading || !assetType || !assetPrices) return;
+
     let price: number | undefined;
     let unit: string | undefined;
     let autoUpdate = false;
 
-    if (assetType === 'gold' && commodityPrices.gold) {
-      price = commodityPrices.gold;
-      unit = 'ounces';
-      autoUpdate = true;
-    } else if (assetType === 'silver' && commodityPrices.silver) {
-      price = commodityPrices.silver;
-      unit = 'ounces';
-      autoUpdate = true;
+    const lowerCaseType = assetType.toLowerCase();
+
+    if (lowerCaseType in assetPrices) {
+        price = assetPrices[lowerCaseType as keyof typeof assetPrices];
+        autoUpdate = true;
+        if (lowerCaseType === 'gold' || lowerCaseType === 'silver') {
+            unit = 'ounces';
+        } else if (lowerCaseType === 'bitcoin') {
+            unit = 'BTC';
+        } else if (lowerCaseType === 'ethereum') {
+            unit = 'ETH';
+        } else if (lowerCaseType === 'cardano') {
+            unit = 'ADA';
+        }
     }
 
     if (price !== undefined) {
@@ -204,9 +213,9 @@ function AddAssetForm({ setDialogOpen }: { setDialogOpen: (open: boolean) => voi
       form.setValue('auto_update', autoUpdate);
     }
     if (unit) {
-      form.setValue('unit', unit);
+      form.setValue('unit', unit, { shouldValidate: true });
     }
-  }, [assetType, commodityPrices, pricesLoading, form]);
+  }, [assetType, assetPrices, pricesLoading, form]);
 
 
   const onSubmit = (values: AssetFormValues) => {
@@ -217,36 +226,35 @@ function AddAssetForm({ setDialogOpen }: { setDialogOpen: (open: boolean) => voi
     });
   };
 
-  const isPriceAuto = (assetType === 'gold' || assetType === 'silver') && !pricesLoading;
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField control={form.control} name="type" render={({ field }) => (<FormItem><FormLabel>Asset Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select asset type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="silver">Silver</SelectItem><SelectItem value="gold">Gold</SelectItem><SelectItem value="bitcoin">Bitcoin</SelectItem><SelectItem value="ethereum">Ethereum</SelectItem><SelectItem value="real_estate">Real Estate</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+        <FormField control={form.control} name="type" render={({ field }) => (<FormItem><FormLabel>Asset Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select asset type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="gold">Gold</SelectItem><SelectItem value="silver">Silver</SelectItem><SelectItem value="bitcoin">Bitcoin</SelectItem><SelectItem value="ethereum">Ethereum</SelectItem><SelectItem value="cardano">Cardano</SelectItem><SelectItem value="real_estate">Real Estate</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="quantity" render={({ field }) => (<FormItem><FormLabel>Quantity</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
-          <FormField control={form.control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger></FormControl><SelectContent><SelectItem value="grams">Grams</SelectItem><SelectItem value="ounces">Ounces</SelectItem><SelectItem value="BTC">BTC</SelectItem><SelectItem value="ETH">ETH</SelectItem><SelectItem value="property">Property</SelectItem><SelectItem value="shares">Shares</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+          <FormField control={form.control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger></FormControl><SelectContent><SelectItem value="ounces">Ounces</SelectItem><SelectItem value="grams">Grams</SelectItem><SelectItem value="BTC">BTC</SelectItem><SelectItem value="ETH">ETH</SelectItem><SelectItem value="ADA">ADA</SelectItem><SelectItem value="property">Property</SelectItem><SelectItem value="shares">Shares</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
         </div>
-        <FormField
-          control={form.control}
-          name="price_per_unit"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Price per Unit</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder={pricesLoading ? "Loading prices..." : "0.00"}
-                  {...field}
-                  disabled={isPriceAuto}
-                  value={field.value ?? ""}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {!isPriceAuto && (
+            <FormField
+              control={form.control}
+              name="price_per_unit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Price per Unit</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder={"0.00"}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+        )}
         <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button><Button type="submit" disabled={addAssetMutation.isPending}>{addAssetMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Add Asset</Button></div>
       </form>
     </Form>
