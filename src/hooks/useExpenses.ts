@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
+import { Currency } from '@/contexts/CurrencyContext';
 
 // Define the Expense type
 export interface Expense {
@@ -9,7 +10,7 @@ export interface Expense {
   title: string;
   category: string;
   amount: number;
-  currency: string;
+  currency: Currency;
   date: string;
   status: 'paid' | 'pending';
   type: 'fixed' | 'variable';

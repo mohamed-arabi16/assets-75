@@ -55,6 +55,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -75,7 +76,7 @@ interface Income {
   user_id: string;
   title: string;
   amount: number;
-  currency: string;
+  currency: Currency;
   category: string;
   status: 'expected' | 'received';
   date: string;
@@ -86,7 +87,7 @@ export default function IncomePage() {
   const { data: incomesData, isLoading, isError } = useIncomes();
   const incomes = incomesData || [];
   const [filter, setFilter] = useState("all");
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, convertCurrency, currency } = useCurrency();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
@@ -101,15 +102,16 @@ export default function IncomePage() {
 
   const totalExpected = filteredIncomesByMonth
     .filter((i) => i.status === "expected")
-    .reduce((sum, i) => sum + i.amount, 0);
+    .reduce((sum, i) => sum + convertCurrency(i.amount, i.currency), 0);
 
   const totalReceived = filteredIncomesByMonth
     .filter((i) => i.status === "received")
-    .reduce((sum, i) => sum + i.amount, 0);
+    .reduce((sum, i) => sum + convertCurrency(i.amount, i.currency), 0);
 
   const incomeByCategory = filteredIncomesByMonth.reduce((acc, income) => {
     const category = income.category;
-    acc[category] = (acc[category] || 0) + income.amount;
+    const convertedAmount = convertCurrency(income.amount, income.currency);
+    acc[category] = (acc[category] || 0) + convertedAmount;
     return acc;
   }, {} as Record<string, number>);
 
@@ -147,9 +149,9 @@ export default function IncomePage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <FinancialCard variant="income" title="Total Received" value={formatCurrency(totalReceived, 'USD')} subtitle="This month" icon={<TrendingUp className="h-5 w-5" />} />
-        <FinancialCard variant="default" title="Expected" value={formatCurrency(totalExpected, 'USD')} subtitle="Next 30-60 days" icon={<TrendingUp className="h-5 w-5" />} />
-        <FinancialCard variant="default" title="Total Income" value={formatCurrency(totalReceived + totalExpected, 'USD')} subtitle="Combined total" icon={<TrendingUp className="h-5 w-5" />} />
+        <FinancialCard variant="income" title="Total Received" value={formatCurrency(totalReceived, currency)} subtitle="This month" icon={<TrendingUp className="h-5 w-5" />} />
+        <FinancialCard variant="default" title="Expected" value={formatCurrency(totalExpected, currency)} subtitle="Next 30-60 days" icon={<TrendingUp className="h-5 w-5" />} />
+        <FinancialCard variant="default" title="Total Income" value={formatCurrency(totalReceived + totalExpected, currency)} subtitle="Combined total" icon={<TrendingUp className="h-5 w-5" />} />
       </div>
 
       {/* Income by Category */}
@@ -166,7 +168,7 @@ export default function IncomePage() {
                   <TrendingUp className="h-4 w-4 text-income" />
                   <span className="text-sm font-medium capitalize">{category}</span>
                 </div>
-                <div className="text-2xl font-bold">{formatCurrency(amount, 'USD')}</div>
+                <div className="text-2xl font-bold">{formatCurrency(amount, currency)}</div>
                 <div className="text-sm text-muted-foreground">
                   {((amount / (totalReceived + totalExpected)) * 100).toFixed(1)}% of total
                 </div>
@@ -246,7 +248,14 @@ function IncomeList({ incomes, onEdit, onDelete }: { incomes: Income[], onEdit: 
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="text-left sm:text-right">
                 <div className="font-semibold text-sm sm:text-base">
-                  {formatCurrency(income.amount, income.currency as Currency)}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>{formatCurrency(income.amount, income.currency)}</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Original: {new Intl.NumberFormat(undefined, { style: 'currency', currency: income.currency }).format(income.amount)}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
                 <Badge className={`${getStatusColor(income.status)} text-white text-xs`}>{income.status}</Badge>
               </div>
