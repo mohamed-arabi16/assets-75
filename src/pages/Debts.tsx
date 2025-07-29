@@ -47,10 +47,15 @@ import {
   CheckCircle, 
   Clock,
   Edit,
-  Trash2
+  Trash2,
+  Calendar as CalendarIcon,
+  Plus
 } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { supabase } from "@/lib/supabaseClient";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface Debt {
   id: string;
@@ -301,7 +306,28 @@ export default function Debts() {
                 </div>
                 <div>
                   <Label htmlFor="dueDate">Due Date</Label>
-                  <Input id="dueDate" type="date" value={newDebt.dueDate} onChange={(e) => setNewDebt({ ...newDebt, dueDate: e.target.value })} />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !newDebt.dueDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newDebt.dueDate ? format(newDebt.dueDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={newDebt.dueDate ? new Date(newDebt.dueDate) : undefined}
+                        onSelect={(date) => setNewDebt({ ...newDebt, dueDate: date ? format(date, "yyyy-MM-dd") : '' })}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <Label htmlFor="type">Type</Label>
@@ -319,7 +345,7 @@ export default function Debts() {
                   <Button type="button" variant="outline" onClick={() => setIsAddingDebt(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-gradient-primary">
+                  <Button type="submit" className="bg-gradient-primary" disabled={!newDebt.title || !newDebt.creditor || !newDebt.amount || !newDebt.dueDate || !newDebt.type}>
                     Add Debt
                   </Button>
                 </div>
@@ -600,7 +626,28 @@ export default function Debts() {
                 </div>
                 <div>
                   <Label htmlFor="dueDate">Due Date</Label>
-                  <Input name="dueDate" type="date" value={editFormData.dueDate} onChange={handleInputChange} />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !editFormData.dueDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {editFormData.dueDate ? format(editFormData.dueDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={editFormData.dueDate ? new Date(editFormData.dueDate) : undefined}
+                        onSelect={(date) => handleInputChange({ target: { name: 'dueDate', value: date ? format(date, "yyyy-MM-dd") : '' } } as React.ChangeEvent<HTMLInputElement>)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
@@ -622,7 +669,7 @@ export default function Debts() {
                   <Button type="button" variant="outline" onClick={() => setIsEditingDebt(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-gradient-primary">
+                  <Button type="submit" className="bg-gradient-primary" disabled={!editFormData.title || !editFormData.creditor || !editFormData.amount || !editFormData.dueDate || !editFormData.status}>
                     Save Changes
                   </Button>
                 </div>

@@ -32,8 +32,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, Edit, Trash2, Filter } from "lucide-react";
+import { Plus, TrendingUp, Edit, Trash2, Filter, Calendar as CalendarIcon } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface Income {
   id: string;
@@ -277,13 +285,34 @@ export default function Income() {
                 </div>
                 <div>
                   <Label htmlFor="date">Date</Label>
-                  <Input id="date" type="date" value={newIncome.date} onChange={(e) => setNewIncome({ ...newIncome, date: e.target.value })} />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !newIncome.date && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newIncome.date ? format(newIncome.date, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={newIncome.date ? new Date(newIncome.date) : undefined}
+                        onSelect={(date) => setNewIncome({ ...newIncome, date: date ? format(date, "yyyy-MM-dd") : '' })}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button type="button" variant="outline" onClick={() => setIsAddingIncome(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-gradient-primary">
+                  <Button type="submit" className="bg-gradient-primary" disabled={!newIncome.title || !newIncome.amount || !newIncome.category || !newIncome.status || !newIncome.date}>
                     Add Income
                   </Button>
                 </div>
@@ -478,13 +507,34 @@ export default function Income() {
                 </div>
                 <div>
                   <Label htmlFor="date">Date</Label>
-                  <Input name="date" type="date" value={editFormData.date} onChange={handleInputChange} />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !editFormData.date && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {editFormData.date ? format(editFormData.date, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={editFormData.date ? new Date(editFormData.date) : undefined}
+                        onSelect={(date) => handleInputChange({ target: { name: 'date', value: date ? format(date, "yyyy-MM-dd") : '' } } as React.ChangeEvent<HTMLInputElement>)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button type="button" variant="outline" onClick={() => setIsEditingIncome(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-gradient-primary">
+                  <Button type="submit" className="bg-gradient-primary" disabled={!editFormData.title || !editFormData.amount || !editFormData.category || !editFormData.status || !editFormData.date}>
                     Save Changes
                   </Button>
                 </div>
