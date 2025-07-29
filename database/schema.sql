@@ -107,6 +107,52 @@ CREATE POLICY "user reads own debt history"
 ON debt_amount_history FOR SELECT
 USING (user_id = auth.uid());
 
-CREATE POLICY "user inserts own debt history"
-ON debt_amount_history FOR INSERT
+CREATE POLICY "user can manage own debt history"
+ON debt_amount_history FOR ALL
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+
+-- RLS Policies for all tables
+
+-- Profiles
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "user can manage own profile"
+ON profiles FOR ALL
+USING (id = auth.uid())
+WITH CHECK (id = auth.uid());
+
+-- Assets
+ALTER TABLE assets ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "user can manage own assets"
+ON assets FOR ALL
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- Debts
+ALTER TABLE debts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "user can manage own debts"
+ON debts FOR ALL
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- Expenses
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "user can manage own expenses"
+ON expenses FOR ALL
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- Incomes
+ALTER TABLE incomes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "user can manage own income"
+ON incomes FOR ALL
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- User Settings
+ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "user can manage own settings"
+ON user_settings FOR ALL
+USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());

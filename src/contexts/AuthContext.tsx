@@ -100,6 +100,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     if (profileError) {
       // If profile creation fails, we should probably handle this, maybe delete the user
+      console.error("Error creating profile:", profileError);
+      setIsLoading(false);
+      return false;
+    }
+
+    const { error: settingsError } = await supabase
+      .from('user_settings')
+      .insert([{ user_id: data.user.id }]);
+
+    if (settingsError) {
+      // If settings creation fails, we should probably handle this, maybe delete the user
+      console.error("Error creating user settings:", settingsError);
       setIsLoading(false);
       return false;
     }
