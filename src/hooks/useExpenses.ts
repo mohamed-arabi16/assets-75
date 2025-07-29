@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { Currency } from '@/contexts/CurrencyContext';
+import { useLogActivity } from './useLogActivity';
 
 // Define the Expense type
 export interface Expense {
@@ -53,11 +54,17 @@ const addExpense = async (newExpense: Omit<Expense, 'id' | 'created_at'>) => {
 export const useAddExpense = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const logActivity = useLogActivity();
 
   return useMutation({
     mutationFn: addExpense,
-    onSuccess: () => {
+    onSuccess: (newExpense) => {
       queryClient.invalidateQueries({ queryKey: ['expenses', user?.id] });
+      logActivity({
+        type: 'expense',
+        action: 'create',
+        description: `Created expense: ${newExpense.title}`,
+      });
     },
   });
 };
@@ -78,33 +85,46 @@ const updateExpense = async (updatedExpense: Partial<Expense> & { id: string }) 
 export const useUpdateExpense = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const logActivity = useLogActivity();
 
   return useMutation({
     mutationFn: updateExpense,
-    onSuccess: () => {
+    onSuccess: (updatedExpense) => {
       queryClient.invalidateQueries({ queryKey: ['expenses', user?.id] });
+      logActivity({
+        type: 'expense',
+        action: 'edit',
+        description: `Updated expense: ${updatedExpense.title}`,
+      });
     },
   });
 };
 
 // 4. Hook to delete an expense
-const deleteExpense = async (expenseId: string) => {
+const deleteExpense = async (expense: Expense) => {
   const { error } = await supabase
     .from('expenses')
     .delete()
-    .eq('id', expenseId);
+    .eq('id', expense.id);
 
   if (error) throw new Error(error.message);
+  return expense;
 };
 
 export const useDeleteExpense = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const logActivity = useLogActivity();
 
   return useMutation({
     mutationFn: deleteExpense,
-    onSuccess: () => {
+    onSuccess: (deletedExpense) => {
       queryClient.invalidateQueries({ queryKey: ['expenses', user?.id] });
+      logActivity({
+        type: 'expense',
+        action: 'delete',
+        description: `Deleted expense: ${deletedExpense.title}`,
+      });
     },
   });
 };

@@ -15,6 +15,7 @@ import Income from "./pages/Income";
 import Expenses from "./pages/Expenses";
 import Debts from "./pages/Debts";
 import Assets from "./pages/Assets";
+import EditAssetPage from "./pages/EditAssetPage";
 import Settings from "./pages/Settings";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
@@ -42,6 +43,7 @@ const App = () => (
                           <Route path="/expenses" element={<Expenses />} />
                           <Route path="/debts" element={<Debts />} />
                           <Route path="/assets" element={<Assets />} />
+                          <Route path="/assets/:assetId/edit" element={<EditAssetPage />} />
                           <Route path="/settings" element={<Settings />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>

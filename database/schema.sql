@@ -24,6 +24,7 @@ CREATE TABLE assets (
     unit text NOT NULL,
     price_per_unit numeric NOT NULL,
     currency currency_code NOT NULL,
+    conversion_rate numeric,
     total_value numeric GENERATED ALWAYS AS (quantity * price_per_unit) STORED,
     auto_update boolean NOT NULL DEFAULT true,
     created_at timestamptz NOT NULL DEFAULT now()
@@ -109,6 +110,50 @@ USING (user_id = auth.uid());
 
 CREATE POLICY "user can manage own debt history"
 ON debt_amount_history FOR ALL
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+
+-- Recent user activities
+CREATE TABLE recent_activity (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    type text NOT NULL, -- e.g., 'income', 'expense', 'debt', 'asset'
+    action text NOT NULL, -- e.g., 'create', 'edit', 'delete', 'payment'
+    description text NOT NULL,
+    timestamp timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX recent_activity_user_idx ON recent_activity(user_id, timestamp DESC);
+
+-- RLS Policies for recent_activity
+ALTER TABLE recent_activity ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "user can manage own activity"
+ON recent_activity FOR ALL
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- new table to store income snapshots
+CREATE TABLE income_amount_history (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    income_id uuid NOT NULL REFERENCES incomes(id) ON DELETE CASCADE,
+    user_id   uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    amount    numeric NOT NULL,
+    note      text NOT NULL DEFAULT '',
+    logged_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX income_amount_history_income_idx ON income_amount_history(income_id);
+
+-- row-level security for income_amount_history
+ALTER TABLE income_amount_history ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "user reads own income history"
+ON income_amount_history FOR SELECT
+USING (user_id = auth.uid());
+
+CREATE POLICY "user can manage own income history"
+ON income_amount_history FOR ALL
 USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());
 

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from './AuthContext';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
 
 export type Currency = 'USD' | 'TRY';
 
@@ -29,9 +30,8 @@ interface CurrencyProviderProps {
 export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) => {
   const { session } = useAuth();
   const [currency, setCurrency] = useState<Currency>('USD');
-  const [exchangeRate, setExchangeRate] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const { data: rates, error: ratesError, isLoading: ratesLoading } = useExchangeRate('USD');
 
   useEffect(() => {
     const fetchUserSettings = async () => {
@@ -54,45 +54,18 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
     fetchUserSettings();
   }, [session]);
 
-  useEffect(() => {
-    const fetchExchangeRate = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-        if (!response.ok) {
-          throw new Error(`API request failed with status ${response.status}`);
-        }
-        const data = await response.json();
-        if (data.rates && data.rates.TRY) {
-          setExchangeRate(data.rates.TRY);
-        } else {
-          throw new Error('TRY exchange rate not found in API response');
-        }
-      } catch (error) {
-        if (error instanceof Error) {
-          console.error('Failed to fetch exchange rate:', error.message);
-          setError('Failed to fetch exchange rate. Please try again later.');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchExchangeRate();
-
-    const interval = setInterval(fetchExchangeRate, 60000); // Fetches every minute
-    
-    return () => clearInterval(interval);
-  }, []);
+  const exchangeRate = rates?.TRY ?? 0;
 
   const convertCurrency = (amount: number, fromCurrency: Currency): number => {
+    if (ratesError || ratesLoading || !rates || !rates.TRY) {
+      return amount; // Return original amount if rates aren't available
+    }
     if (fromCurrency === currency) return amount;
     
     if (fromCurrency === 'USD' && currency === 'TRY') {
-      return amount * exchangeRate;
+      return amount * rates.TRY;
     } else if (fromCurrency === 'TRY' && currency === 'USD') {
-      return amount / exchangeRate;
+      return amount / rates.TRY;
     }
     
     return amount;

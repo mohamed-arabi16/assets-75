@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 interface DateContextType {
   selectedMonth: string;
@@ -24,16 +24,19 @@ interface DateProviderProps {
 
 export const DateProvider: React.FC<DateProviderProps> = ({ children }) => {
   const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return localStorage.getItem('selectedMonth') || 'all';
   });
+
+  useEffect(() => {
+    localStorage.setItem('selectedMonth', selectedMonth);
+  }, [selectedMonth]);
 
   const getMonthOptions = () => {
     const options = [{ value: 'all', label: 'All Date' }];
     const currentDate = new Date();
     
-    // Generate last 12 months
-    for (let i = 0; i < 12; i++) {
+    // Generate last 36 months
+    for (let i = 0; i < 36; i++) {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
       const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });

@@ -1,13 +1,11 @@
 import { useMemo } from 'react';
 import { useDate } from '@/contexts/DateContext';
 
-interface DateFilterableItem {
-  date: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
-}
-
-export const useFilteredData = <T extends DateFilterableItem>(data: T[]) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const useFilteredData = <T extends { [key: string]: any }>(
+  data: T[],
+  dateKey = 'date'
+) => {
   const { selectedMonth } = useDate();
 
   const filteredData = useMemo(() => {
@@ -15,33 +13,39 @@ export const useFilteredData = <T extends DateFilterableItem>(data: T[]) => {
 
     const [year, month] = selectedMonth.split('-');
     return data.filter(item => {
-      const itemDate = new Date(item.date);
+      if (!item[dateKey]) return false;
+      const itemDate = new Date(item[dateKey]);
       const itemYear = itemDate.getFullYear().toString();
       const itemMonth = (itemDate.getMonth() + 1).toString().padStart(2, '0');
 
       return itemYear === year && itemMonth === month;
     });
-  }, [data, selectedMonth]);
+  }, [data, selectedMonth, dateKey]);
 
   return filteredData;
 };
 
-export const useMonthlyStats = <T extends DateFilterableItem & { amount: number }>(
-  data: T[], 
-  filterFn?: (item: T) => boolean
+export const useMonthlyStats = <
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  T extends { amount: number; [key: string]: any }
+>(
+  data: T[],
+  filterFn?: (item: T) => boolean,
+  dateKey = 'date'
 ) => {
   const { selectedMonth } = useDate();
 
   const stats = useMemo(() => {
     let filteredData = data;
-    
+
     if (selectedMonth && selectedMonth !== 'all') {
       const [year, month] = selectedMonth.split('-');
       filteredData = data.filter(item => {
-        const itemDate = new Date(item.date);
+        if (!item[dateKey]) return false;
+        const itemDate = new Date(item[dateKey]);
         const itemYear = itemDate.getFullYear().toString();
         const itemMonth = (itemDate.getMonth() + 1).toString().padStart(2, '0');
-        
+
         return itemYear === year && itemMonth === month;
       });
     }
@@ -55,7 +59,7 @@ export const useMonthlyStats = <T extends DateFilterableItem & { amount: number 
     const average = count > 0 ? total / count : 0;
 
     return { total, count, average, items: filteredData };
-  }, [data, selectedMonth, filterFn]);
+  }, [data, selectedMonth, filterFn, dateKey]);
 
   return stats;
 };

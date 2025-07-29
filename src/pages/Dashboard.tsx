@@ -16,7 +16,9 @@ import { useIncomes } from "@/hooks/useIncomes";
 import { useExpenses } from "@/hooks/useExpenses";
 import { useDebts } from "@/hooks/useDebts";
 import { useAssets } from "@/hooks/useAssets";
+import { useRecentActivity } from "@/hooks/useRecentActivity";
 import { useFilteredData } from "@/hooks/useFilteredData";
+import { formatDistanceToNow } from 'date-fns';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +40,7 @@ export default function Dashboard() {
   const { data: expensesData, isLoading: expensesLoading } = useExpenses();
   const { data: debtsData, isLoading: debtsLoading } = useDebts();
   const { data: assetsData, isLoading: assetsLoading } = useAssets();
+  const { data: activities, isLoading: activitiesLoading, isError: activitiesError } = useRecentActivity(5);
 
   const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
@@ -138,7 +141,30 @@ export default function Dashboard() {
         <div className="bg-gradient-card rounded-lg p-4 sm:p-6 border border-border shadow-card">
           <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
           <div className="space-y-3">
-            {/* Recent activity will be populated from data */}
+            {activitiesLoading && (
+                <>
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                </>
+            )}
+            {activitiesError && <p className="text-muted-foreground">Could not load recent activity.</p>}
+            {!activitiesLoading && !activitiesError && activities && activities.length === 0 && (
+                <p className="text-muted-foreground">No recent activity to display.</p>
+            )}
+            {!activitiesLoading && !activitiesError && activities && activities.map(activity => (
+                <div key={activity.id} className="flex items-center gap-3">
+                    <div className="p-2 bg-muted rounded-full">
+                        <CreditCard className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-sm">{activity.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                        </p>
+                    </div>
+                </div>
+            ))}
           </div>
         </div>
       </div>
