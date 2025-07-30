@@ -27,18 +27,27 @@ export const useAssetPrices = () => {
         }
         const cryptoData = await cryptoResponse.json();
 
-        // TODO: Replace mocked metal prices with a real API call when available.
-        // The previously used metals.dev API is defunct, and others require API keys.
-        const metalPrices = {
-          gold: MOCK_GOLD_PRICE,
-          silver: MOCK_SILVER_PRICE,
-        };
+        // Fetch metal prices from metalpriceapi.com
+        const apiKey = import.meta.env.VITE_METALPRICEAPI_API_KEY;
+        if (!apiKey) {
+          throw new Error('MetalpriceAPI key is not set in the environment variables.');
+        }
+        const metalResponse = await fetch(`https://api.metalpriceapi.com/v1/latest?api_key=${apiKey}&base=USD&currencies=XAU,XAG`);
+        if (!metalResponse.ok) {
+          throw new Error(`Metal API request failed with status ${metalResponse.status}`);
+        }
+        const metalData = await metalResponse.json();
+
+        if (!metalData.success) {
+          throw new Error(`Metal API returned an error: ${metalData.error?.info}`);
+        }
 
         setPrices({
           bitcoin: cryptoData.bitcoin?.usd,
           ethereum: cryptoData.ethereum?.usd,
           cardano: cryptoData.cardano?.usd,
-          ...metalPrices,
+          gold: metalData.rates?.USDXAU,
+          silver: metalData.rates?.USDXAG,
         });
 
       } catch (error) {
