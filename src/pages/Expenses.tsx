@@ -71,7 +71,7 @@ import { format } from "date-fns";
 const expenseSchema = z.object({
   title: z.string().min(2, { message: "Title must be at least 2 characters." }),
   amount: z.coerce.number().positive({ message: "Amount must be a positive number." }),
-  currency: z.string().default("USD"),
+  currency: z.enum(['USD', 'TRY']).default("USD"),
   category: z.string().min(1, { message: "Please select a category." }),
   type: z.enum(['fixed', 'variable']),
   status: z.enum(['paid', 'pending']),
@@ -244,7 +244,16 @@ export function AddExpenseForm({ setDialogOpen }: { setDialogOpen: (open: boolea
   const onSubmit = (values: ExpenseFormValues) => {
     if (!user) return;
     addExpenseMutation.mutate(
-      { ...values, user_id: user.id, date: format(values.date, "yyyy-MM-dd") },
+      {
+        title: values.title!,
+        amount: values.amount!,
+        currency: values.currency ?? 'USD',
+        category: values.category!,
+        type: values.type!,
+        status: values.status!,
+        user_id: user.id,
+        date: format(values.date, "yyyy-MM-dd")
+      },
       {
         onSuccess: () => {
           toast.success("Expense added successfully!");
@@ -304,7 +313,16 @@ function EditExpenseForm({ setDialogOpen, expense }: { setDialogOpen: (open: boo
 
   const onSubmit = (values: ExpenseFormValues) => {
     updateExpenseMutation.mutate(
-      { ...values, id: expense.id, date: format(values.date, "yyyy-MM-dd") },
+      {
+        id: expense.id,
+        title: values.title!,
+        amount: values.amount!,
+        currency: values.currency ?? 'USD',
+        category: values.category!,
+        type: values.type!,
+        status: values.status!,
+        date: format(values.date, "yyyy-MM-dd")
+      },
       {
         onSuccess: () => {
           toast.success("Expense updated successfully!");

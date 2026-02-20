@@ -1,5 +1,5 @@
-import { useCurrency } from "@/contexts/CurrencyContext";
-import { Debt, DebtAmountHistory } from "@/hooks/useDebts";
+import { useCurrency, Currency } from "@/contexts/CurrencyContext";
+import { Debt } from "@/hooks/useDebts";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +47,8 @@ export function DebtHistoryModal({ debt, isOpen, onClose }: DebtHistoryModalProp
     minute: '2-digit'
   });
 
+  const debtCurrency = debt.currency as Currency;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl">
@@ -71,12 +73,12 @@ export function DebtHistoryModal({ debt, isOpen, onClose }: DebtHistoryModalProp
               {history.map((entry, index) => (
                 <TableRow key={entry.id}>
                   <TableCell>{formatDate(entry.logged_at)}</TableCell>
-                  <TableCell>{formatCurrency(entry.prev_amount, debt.currency)}</TableCell>
-                  <TableCell>{formatCurrency(entry.amount, debt.currency)}</TableCell>
+                  <TableCell>{formatCurrency(entry.prev_amount, debtCurrency)}</TableCell>
+                  <TableCell>{formatCurrency(entry.amount, debtCurrency)}</TableCell>
                   <TableCell>
                     {entry.delta !== 0 ? (
                       <Badge variant={entry.delta > 0 ? "destructive" : "default"} className={entry.delta > 0 ? 'bg-red-500' : 'bg-green-500'}>
-                        {entry.delta > 0 ? 'Increase' : 'Payment'}: {formatCurrency(Math.abs(entry.delta), debt.currency)}
+                        {entry.delta > 0 ? 'Increase' : 'Payment'}: {formatCurrency(Math.abs(entry.delta), debtCurrency)}
                       </Badge>
                     ) : (
                       <Badge variant="outline">
