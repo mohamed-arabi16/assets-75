@@ -63,7 +63,7 @@ import { format } from "date-fns";
 const incomeSchema = z.object({
   title: z.string().min(2, { message: "Title must be at least 2 characters." }),
   amount: z.coerce.number().positive({ message: "Amount must be a positive number." }),
-  currency: z.string().default("USD"),
+  currency: z.enum(['USD', 'TRY']).default("USD"),
   category: z.string().min(1, { message: "Please select a category." }),
   status: z.enum(['expected', 'received']),
   date: z.date({ required_error: "A date is required." }),
@@ -303,7 +303,15 @@ export function AddIncomeForm({ setDialogOpen }: { setDialogOpen: (open: boolean
   const onSubmit = (values: IncomeFormValues) => {
     if (!user) return;
     addIncomeMutation.mutate(
-      { ...values, user_id: user.id, date: format(values.date, "yyyy-MM-dd") },
+      {
+        title: values.title!,
+        amount: values.amount!,
+        currency: values.currency ?? 'USD',
+        category: values.category!,
+        status: values.status!,
+        user_id: user.id,
+        date: format(values.date, "yyyy-MM-dd")
+      },
       {
         onSuccess: () => {
           toast.success("Income added successfully!");
@@ -364,7 +372,16 @@ function EditIncomeForm({ setDialogOpen, income }: { setDialogOpen: (open: boole
 
   const onSubmit = (values: IncomeFormValues) => {
     updateIncomeMutation.mutate(
-      { ...values, id: income.id, date: format(values.date, "yyyy-MM-dd") },
+      {
+        id: income.id,
+        title: values.title!,
+        amount: values.amount!,
+        currency: values.currency ?? 'USD',
+        category: values.category!,
+        status: values.status!,
+        note: values.note,
+        date: format(values.date, "yyyy-MM-dd")
+      },
       {
         onSuccess: () => {
           toast.success("Income updated successfully!");

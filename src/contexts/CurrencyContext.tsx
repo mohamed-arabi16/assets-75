@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { useAuth } from './AuthContext';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
 
 export type Currency = 'USD' | 'TRY';
@@ -28,13 +27,13 @@ interface CurrencyProviderProps {
 }
 
 export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) => {
-  const { session } = useAuth();
   const [currency, setCurrency] = useState<Currency>('USD');
 
   const { data: rates, error: ratesError, isLoading: ratesLoading } = useExchangeRate('USD');
 
   useEffect(() => {
     const fetchUserSettings = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.id) {
         const { data, error } = await supabase
           .from('user_settings')
@@ -52,7 +51,7 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
     };
 
     fetchUserSettings();
-  }, [session]);
+  }, []);
 
   const exchangeRate = rates?.TRY ?? 0;
 

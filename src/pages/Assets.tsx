@@ -70,7 +70,7 @@ const assetSchema = z.object({
   quantity: z.coerce.number().positive({ message: "Quantity must be positive." }),
   unit: z.string().min(1, { message: "Please select a unit." }),
   price_per_unit: z.coerce.number().positive({ message: "Price must be positive." }),
-  currency: z.string().default("USD"),
+  currency: z.enum(['USD', 'TRY']).default("USD"),
   auto_update: z.boolean().default(false),
 });
 
@@ -195,7 +195,8 @@ function AddAssetForm({ setDialogOpen }: { setDialogOpen: (open: boolean) => voi
     const lowerCaseType = assetType.toLowerCase();
 
     if (lowerCaseType in assetPrices) {
-        price = assetPrices[lowerCaseType as keyof typeof assetPrices];
+        const rawPrice = assetPrices[lowerCaseType as keyof typeof assetPrices];
+        price = typeof rawPrice === 'number' ? rawPrice : undefined;
         autoUpdate = true;
         if (lowerCaseType === 'gold' || lowerCaseType === 'silver') {
             unit = 'ounces';
@@ -220,7 +221,15 @@ function AddAssetForm({ setDialogOpen }: { setDialogOpen: (open: boolean) => voi
 
   const onSubmit = (values: AssetFormValues) => {
     if (!user) return;
-    addAssetMutation.mutate({ ...values, user_id: user.id }, {
+    addAssetMutation.mutate({
+      type: values.type,
+      quantity: values.quantity,
+      unit: values.unit,
+      price_per_unit: values.price_per_unit,
+      currency: values.currency,
+      auto_update: values.auto_update,
+      user_id: user.id
+    }, {
         onSuccess: () => { toast.success("Asset added!"); setDialogOpen(false); },
         onError: (err) => toast.error(`Error: ${err.message}`),
     });

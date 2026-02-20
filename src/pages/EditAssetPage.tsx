@@ -62,7 +62,7 @@ const EditAssetForm = ({ asset }: { asset: Asset }) => {
     const lowerCaseType = assetType.toLowerCase();
     if (lowerCaseType in assetPrices) {
       const price = assetPrices[lowerCaseType as keyof typeof assetPrices];
-      if (price) {
+      if (typeof price === 'number') {
         form.setValue('price_per_unit', price, { shouldValidate: true });
       }
     }

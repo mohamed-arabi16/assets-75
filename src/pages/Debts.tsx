@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { DateFilterSelector } from "@/components/DateFilterSelector";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { Currency } from "@/contexts/CurrencyContext";
 import { useFilteredData } from "@/hooks/useFilteredData";
 import { useDebts, useAddDebt, useUpdateDebt, useDeleteDebt, Debt } from "@/hooks/useDebts";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -81,7 +82,7 @@ const debtSchema = z.object({
   title: z.string().min(2, { message: "Title must be at least 2 characters." }),
   creditor: z.string().min(2, { message: "Creditor must be at least 2 characters." }),
   amount: z.coerce.number().positive({ message: "Amount must be a positive number." }),
-  currency: z.string().default("USD"),
+  currency: z.enum(['USD', 'TRY']).default("USD"),
   status: z.enum(['pending', 'paid']),
   due_date: z.date({ required_error: "A due date is required." }),
   note: z.string().optional(),
@@ -124,10 +125,10 @@ export default function DebtsPage() {
   const shortTermDebts = filteredDebtsByMonth.filter((debt) => debt.type === "short");
   const longTermDebts = filteredDebtsByMonth.filter((debt) => debt.type === "long");
 
-  const totalShortTerm = shortTermDebts.reduce((sum, debt) => sum + convertCurrency(debt.amount, debt.currency), 0);
-  const totalLongTerm = longTermDebts.reduce((sum, debt) => sum + convertCurrency(debt.amount, debt.currency), 0);
-  const totalPending = filteredDebtsByMonth.filter((d) => d.status === "pending").reduce((sum, d) => sum + convertCurrency(d.amount, d.currency), 0);
-  const totalPaid = filteredDebtsByMonth.filter((d) => d.status === "paid").reduce((sum, d) => sum + convertCurrency(d.amount, d.currency), 0);
+  const totalShortTerm = shortTermDebts.reduce((sum, debt) => sum + convertCurrency(debt.amount, debt.currency as Currency), 0);
+  const totalLongTerm = longTermDebts.reduce((sum, debt) => sum + convertCurrency(debt.amount, debt.currency as Currency), 0);
+  const totalPending = filteredDebtsByMonth.filter((d) => d.status === "pending").reduce((sum, d) => sum + convertCurrency(d.amount, d.currency as Currency), 0);
+  const totalPaid = filteredDebtsByMonth.filter((d) => d.status === "paid").reduce((sum, d) => sum + convertCurrency(d.amount, d.currency as Currency), 0);
 
   const filteredDebts = activeTab === "short" ? shortTermDebts : longTermDebts;
 
@@ -223,7 +224,7 @@ export default function DebtsPage() {
             <DialogHeader>
               <DialogTitle>Make a Payment on {payingDebt.title}</DialogTitle>
               <DialogDescription>
-                Current balance: {formatCurrency(payingDebt.amount, payingDebt.currency)}
+                Current balance: {formatCurrency(payingDebt.amount, payingDebt.currency as Currency)}
               </DialogDescription>
             </DialogHeader>
             <MakePaymentForm setDialogOpen={setIsPaymentDialogOpen} debt={payingDebt} />
@@ -257,7 +258,7 @@ function DebtTable({ debts, onEdit, onDelete, onViewHistory, onMakePayment }: { 
             <TableCell className="text-right">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span>{formatCurrency(debt.amount, debt.currency)}</span>
+                  <span>{formatCurrency(debt.amount, debt.currency as Currency)}</span>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Original: {new Intl.NumberFormat(undefined, { style: 'currency', currency: debt.currency }).format(debt.amount)}</p>
@@ -315,7 +316,16 @@ export function AddDebtForm({ setDialogOpen }: { setDialogOpen: (open: boolean) 
     if (!user) return;
     const debtType = isAfter(values.due_date, subYears(new Date(), -1)) ? 'long' : 'short';
     addDebtMutation.mutate(
-      { ...values, user_id: user.id, type: debtType, due_date: format(values.due_date, "yyyy-MM-dd") },
+      {
+        title: values.title!,
+        creditor: values.creditor!,
+        amount: values.amount!,
+        currency: values.currency ?? 'USD',
+        status: values.status!,
+        user_id: user.id,
+        type: debtType,
+        due_date: format(values.due_date, "yyyy-MM-dd")
+      },
       {
         onSuccess: () => { toast.success("Debt added!"); setDialogOpen(false); },
         onError: (err) => toast.error(`Error: ${err.message}`),
@@ -344,17 +354,24 @@ function EditDebtForm({ setDialogOpen, debt }: { setDialogOpen: (open: boolean) 
   const updateDebtMutation = useUpdateDebt();
   const form = useForm<DebtFormValues>({
     resolver: zodResolver(editDebtSchema(debt.amount)),
-    defaultValues: { ...debt, due_date: new Date(debt.due_date!), note: '' },
+    defaultValues: { ...debt, currency: debt.currency as 'USD' | 'TRY', due_date: new Date(debt.due_date!), note: '' },
   });
 
   const onSubmit = (values: DebtFormValues) => {
     updateDebtMutation.mutate(
-      { ...values, id: debt.id, due_date: format(values.due_date, "yyyy-MM-dd") },
+      {
+        id: debt.id,
+        title: values.title!,
+        creditor: values.creditor!,
+        amount: values.amount!,
+        currency: values.currency ?? 'USD',
+        status: values.status!,
+        note: values.note,
+        due_date: format(values.due_date, "yyyy-MM-dd"),
+      },
       {
         onSuccess: () => { toast.success("Debt updated!"); setDialogOpen(false); },
         onError: (err) => {
-          // If the error is a Zod validation error, it will be handled by the form.
-          // Otherwise, show a toast.
           if (!('fieldErrors' in err)) {
             toast.error(`Error: ${err.message}`);
           }
@@ -409,7 +426,7 @@ function MakePaymentForm({ setDialogOpen, debt }: { setDialogOpen: (open: boolea
       return;
     }
 
-    const note = values.note || `Payment of ${formatCurrency(values.paymentAmount, debt.currency)}`;
+    const note = values.note || `Payment of ${formatCurrency(values.paymentAmount, debt.currency as Currency)}`;
 
     updateDebtMutation.mutate(
       {
